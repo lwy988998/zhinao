@@ -27,7 +27,8 @@ export const mockPageContent: PageContent = {
       visible: true,
       title: "林悦瑜伽，陪你找回身体的柔软与力量",
       subtitle: "8 年教学经验，专注都市女性体态调整、压力释放与长期练习陪伴。",
-      primaryButtonText: "预约体验课",
+      buttonText: "预约体验课",
+      buttonAction: "wechat",
       secondaryButtonText: "了解课程安排",
     },
     {
@@ -82,7 +83,7 @@ export const mockPageContent: PageContent = {
       visible: true,
       title: "课程与价格",
       description: "可先预约体验课，再决定是否进入长期练习。",
-      plans: [
+      items: [
         {
           name: "单次体验课",
           price: "¥99",
@@ -167,6 +168,7 @@ export const mockPageContent: PageContent = {
       title: "从一节温柔的体验课开始",
       description: "不用等状态完美再开始，先给身体一个被认真照顾的机会。",
       buttonText: "立即预约体验课",
+      buttonAction: "wechat",
     },
   ],
   createdAt: "2026-07-21T14:17:00+08:00",

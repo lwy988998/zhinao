@@ -29,27 +29,40 @@ export interface ContactAction {
   value: string;
 }
 
+type PricingItem = {
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  highlighted?: boolean;
+};
+
 export interface BaseSection {
-  id: string;
+  id?: string;
   type: string;
   title?: string;
   description?: string;
-  visible: boolean;
+  visible?: boolean;
 }
 
 export interface HeroSection extends BaseSection {
   type: "hero";
   title: string;
   subtitle: string;
-  primaryButtonText: string;
+  buttonText: string;
+  buttonAction: string;
+  image?: string;
+  /** Legacy aliases kept so existing mock previews can continue to render. */
+  primaryButtonText?: string;
   secondaryButtonText?: string;
 }
 
 export interface FeaturesSection extends BaseSection {
   type: "features";
   title: string;
+  subtitle?: string;
   description?: string;
-  items: Array<{ title: string; description: string }>;
+  items: Array<{ title: string; description: string; icon?: string }>;
 }
 
 export interface PainPointsSection extends BaseSection {
@@ -77,19 +90,16 @@ export interface PricingSection extends BaseSection {
   type: "pricing";
   title: string;
   description?: string;
-  plans: Array<{
-    name: string;
-    price: string;
-    description: string;
-    features: string[];
-  }>;
+  items: PricingItem[];
+  /** Legacy alias kept for old preview data. */
+  plans?: PricingItem[];
 }
 
 export interface TestimonialsSection extends BaseSection {
   type: "testimonials";
   title: string;
   description?: string;
-  items: Array<{ name: string; role?: string; content: string }>;
+  items: Array<{ name: string; role?: string; content: string; avatar?: string }>;
 }
 
 export interface FAQSection extends BaseSection {
@@ -102,8 +112,14 @@ export interface FAQSection extends BaseSection {
 export interface ContactSection extends BaseSection {
   type: "contact";
   title: string;
-  description?: string;
-  contactAction: ContactAction;
+  description: string;
+  wechat?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  qrcode?: string;
+  /** Legacy section-level action; new PRD uses PageContent.contactAction. */
+  contactAction?: ContactAction;
 }
 
 export interface CTASection extends BaseSection {
@@ -111,6 +127,7 @@ export interface CTASection extends BaseSection {
   title: string;
   description: string;
   buttonText: string;
+  buttonAction: string;
 }
 
 export type PageSection =
