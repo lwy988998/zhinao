@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -54,7 +54,6 @@ const actionOptions = [
   { value: "email", label: "邮件联系" },
 ];
 
-// ── Labels for config summary ──
 const PAGE_TYPE_LABELS: Record<PageType, string> = {
   personal_profile: "个人介绍页",
   product_service: "产品服务页",
@@ -88,7 +87,6 @@ const CONTACT_LABELS: Record<ContactActionType, string> = {
   email: "邮件联系",
 };
 
-// ── Valid values sets for param validation ──
 const VALID_PAGE_TYPES = new Set<string>(["personal_profile", "product_service", "local_business", "event_signup", "course_sales"]);
 const VALID_STYLES = new Set<string>(["minimal", "business", "elegant", "tech", "youthful"]);
 const VALID_COLORS = new Set<string>(["blue", "green", "purple", "orange", "black_gold", "pink"]);
@@ -97,15 +95,12 @@ const VALID_CONTACTS = new Set<string>(["wechat", "phone", "form", "link", "emai
 function validatePageType(v: string | null): PageType {
   return v && VALID_PAGE_TYPES.has(v) ? (v as PageType) : "product_service";
 }
-
 function validateStyle(v: string | null): ThemeStyle {
   return v && VALID_STYLES.has(v) ? (v as ThemeStyle) : "minimal";
 }
-
 function validateColor(v: string | null): PrimaryColor {
   return v && VALID_COLORS.has(v) ? (v as PrimaryColor) : "blue";
 }
-
 function validateContact(v: string | null): ContactActionType {
   return v && VALID_CONTACTS.has(v) ? (v as ContactActionType) : "wechat";
 }
@@ -113,9 +108,9 @@ function validateContact(v: string | null): ContactActionType {
 function GenerateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initializedRef = useRef(false);
+  const mountedRef = useRef(false);
 
-  // Read query params once on mount
+  // ── Read query params ──
   const queryPrompt = useMemo(() => {
     const q = searchParams?.get("prompt");
     return q ? decodeURIComponent(q) : null;
@@ -127,12 +122,12 @@ function GenerateForm() {
   const queryContact = validateContact(searchParams?.get("contactAction") ?? null);
   const queryVisual = (searchParams?.get("visualMode") ?? null) === "1";
 
-  // Whether we have at least one param from homepage
   const hasQueryParams = useMemo(
     () => Boolean(queryPrompt ?? searchParams?.get("pageType") ?? searchParams?.get("style") ?? searchParams?.get("primaryColor") ?? searchParams?.get("contactAction")),
     [queryPrompt, searchParams],
   );
 
+  // ── State ──
   const [userInput, setUserInput] = useState(() => queryPrompt ?? "");
   const [pageType, setPageType] = useState<PageType>(queryPageType);
   const [style, setStyle] = useState<ThemeStyle>(queryStyle);
@@ -143,12 +138,60 @@ function GenerateForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Mark as initialized after first render
-  useEffect(() => {
-    initializedRef.current = true;
-  }, []);
+  // ── Highlight animation ──
+  const [highlightPrompt, setHighlightPrompt] = useState(Boolean(queryPrompt));
+  const [highlightFields, setHighlightFields] = useState(hasQueryParams);
 
-  // Loading step animation
+  // Trigger highlight once on mount, then clear
+  useEffect(() => {
+    if (highlightPrompt) {
+      const t = setTimeout(() => setHighlightPrompt(false), 1800);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (highlightFields) {
+      const t = setTimeout(() => setHighlightFields(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── URL sync with debounce ──
+  const syncURL = useCallback(() => {
+    const params = new URLSearchParams();
+    if (userInput.trim()) params.set("prompt", encodeURIComponent(userInput.trim()));
+    params.set("pageType", pageType);
+    params.set("style", style);
+    params.set("primaryColor", primaryColor);
+    params.set("contactAction", contactAction);
+    if (queryVisual) params.set("visualMode", "1");
+
+    const qs = params.toString();
+    const path = "/generate" + (qs ? `?${qs}` : "");
+    router.replace(path);
+  }, [userInput, pageType, style, primaryColor, contactAction, queryVisual, router]);
+
+  // Sync URL on state change, debounced
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(syncURL, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageType, style, primaryColor, contactAction]);
+
+  // Separate effect for prompt (debounce 800ms to avoid excessive history)
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    const timer = setTimeout(syncURL, 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userInput]);
+
+  // ── Loading step animation ──
   useEffect(() => {
     if (!isLoading) return;
     const timer = window.setInterval(() => {
@@ -157,7 +200,7 @@ function GenerateForm() {
     return () => window.clearInterval(timer);
   }, [isLoading]);
 
-  // Config summary
+  // ── Config summary ──
   const configSummary = useMemo(() => {
     const parts = [
       PAGE_TYPE_LABELS[pageType],
@@ -169,6 +212,7 @@ function GenerateForm() {
     return parts.join(" · ");
   }, [pageType, style, primaryColor, contactAction, queryVisual]);
 
+  // ── Validation ──
   function validate() {
     const trimmed = userInput.trim();
     if (trimmed.length < 10) {
@@ -183,33 +227,27 @@ function GenerateForm() {
     return true;
   }
 
+  // ── Submit ──
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!validate()) return;
-
     setSubmitError("");
     setIsLoading(true);
     setCurrentStep(0);
-
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userInput: queryVisual ? `[视觉增强] ${userInput.trim()}` : userInput.trim(),
-          pageType,
-          style,
-          primaryColor,
-          contactAction,
+          pageType, style, primaryColor, contactAction,
         }),
       });
-
       const payload = (await response.json()) as GenerateResponse;
       if (!response.ok || !payload.success) {
         setSubmitError(payload.success ? "AI 生成失败，请稍后重试" : payload.error);
         return;
       }
-
       window.localStorage.setItem("currentPageContent", JSON.stringify(payload.data));
       router.push("/editor");
     } catch {
@@ -219,16 +257,17 @@ function GenerateForm() {
     }
   }
 
+  // ── Highlight field class ──
+  const fieldHighlightClass = highlightFields
+    ? "ring-2 ring-slate-300 ring-offset-1 rounded-xl transition-all duration-700"
+    : "transition-all duration-500";
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="text-lg font-semibold text-slate-950">
-            智脑
-          </Link>
-          <Link href="/" className="text-sm text-slate-600 transition hover:text-slate-950">
-            返回首页
-          </Link>
+          <Link href="/" className="text-lg font-semibold text-slate-950">智脑</Link>
+          <Link href="/" className="text-sm text-slate-600 transition hover:text-slate-950">返回首页</Link>
         </div>
       </header>
 
@@ -241,9 +280,9 @@ function GenerateForm() {
           </p>
         </div>
 
-        {/* Source hint: when params came from homepage */}
+        {/* Source hint */}
         {hasQueryParams ? (
-          <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+          <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
             <span className="text-base">🏠</span>
             <span>已根据首页选择预填生成配置，你可以继续修改。</span>
           </div>
@@ -256,51 +295,40 @@ function GenerateForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-          <Input
-            label="网页需求"
-            type="textarea"
-            rows={6}
-            required
-            maxLength={1000}
-            value={userInput}
-            onChange={setUserInput}
-            error={inputError}
-            placeholder="例如：我是一个瑜伽老师，想做一个个人介绍页，用来展示课程、价格、学员评价和微信二维码，风格温柔高级。"
-          />
+          {/* Textarea with highlight feedback */}
+          <div className={highlightPrompt ? "animate-pulse rounded-xl" : ""}>
+            <Input
+              label="网页需求"
+              type="textarea"
+              rows={6}
+              required
+              maxLength={1000}
+              value={userInput}
+              onChange={setUserInput}
+              error={inputError}
+              placeholder="例如：我是一个瑜伽老师，想做一个个人介绍页，用来展示课程、价格、学员评价和微信二维码，风格温柔高级。"
+            />
+            {highlightPrompt ? (
+              <p className="mt-1 text-xs text-slate-400">📝 已从首页预填创作需求</p>
+            ) : null}
+          </div>
 
-          <Selector
-            label="页面类型"
-            options={pageTypeOptions}
-            value={pageType}
-            onChange={(value) => setPageType(value as PageType)}
-          />
-
-          <Selector
-            label="视觉风格"
-            options={styleOptions}
-            value={style}
-            onChange={(value) => setStyle(value as ThemeStyle)}
-          />
-
-          <Selector
-            label="主色调"
-            type="color"
-            options={colorOptions}
-            value={primaryColor}
-            onChange={(value) => setPrimaryColor(value as PrimaryColor)}
-          />
-
-          <Selector
-            label="目标动作"
-            options={actionOptions}
-            value={contactAction}
-            onChange={(value) => setContactAction(value as ContactActionType)}
-          />
+          {/* Selectors with highlight */}
+          <div className={fieldHighlightClass}>
+            <Selector label="页面类型" options={pageTypeOptions} value={pageType} onChange={(v) => setPageType(v as PageType)} />
+          </div>
+          <div className={fieldHighlightClass}>
+            <Selector label="视觉风格" options={styleOptions} value={style} onChange={(v) => setStyle(v as ThemeStyle)} />
+          </div>
+          <div className={fieldHighlightClass}>
+            <Selector label="主色调" type="color" options={colorOptions} value={primaryColor} onChange={(v) => setPrimaryColor(v as PrimaryColor)} />
+          </div>
+          <div className={fieldHighlightClass}>
+            <Selector label="目标动作" options={actionOptions} value={contactAction} onChange={(v) => setContactAction(v as ContactActionType)} />
+          </div>
 
           {submitError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-              {submitError}
-            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{submitError}</div>
           ) : null}
 
           {isLoading ? <LoadingSteps steps={loadingSteps} currentStep={currentStep} /> : null}
