@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { PageContent } from "@/types/page";
 import {
   updatePageField,
@@ -110,17 +110,31 @@ type Props = {
   initialContent: PageContent;
 };
 
+type PublishState = "idle" | "publishing" | "success" | "error";
+
+type PublishResult = {
+  pageId: string;
+  editToken: string;
+  publicUrl: string;
+  editUrl: string;
+};
+
 export function PageEditor({ initialContent }: Props) {
   const [content, setContent] = useState<PageContent>(initialContent);
-
-  // Auto-save to localStorage
-  useEffect(() => {
+  const [publishState, setPublishState] = useState<PublishState>("idle");
+  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
+  const [publishError, setPublishError] = useState("");
+  // Check for edit token from /edit/[editToken] flow
+  const [hasEditToken] = useState(() => {
     try {
-      localStorage.setItem("currentPageContent", JSON.stringify(content));
+      return !!localStorage.getItem("currentEditToken");
     } catch {
-      console.warn("Failed to save page content to localStorage");
+      return false;
     }
-  }, [content]);
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [copyLabel, setCopyLabel] = useState("复制公开链接");
+  const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const heroIdx = content.sections.findIndex((s) => s.type === "hero");
   const ctaIdx = content.sections.findIndex((s) => s.type === "cta");
@@ -133,6 +147,73 @@ export function PageEditor({ initialContent }: Props) {
   const update = useCallback((fn: (c: PageContent) => PageContent) => {
     setContent((prev) => fn(prev));
   }, []);
+
+  async function handlePublish() {
+    setPublishState("publishing");
+    setPublishError("");
+
+    try {
+      const response = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success) {
+        setPublishError(payload.error ?? "发布失败，请稍后重试");
+        setPublishState("error");
+        return;
+      }
+
+      setPublishResult(payload.data);
+      setPublishState("success");
+    } catch {
+      setPublishError("网络错误，请稍后重试");
+      setPublishState("error");
+    }
+  }
+
+  async function handleSaveToServer() {
+    setIsSaving(true);
+
+    try {
+      const token = localStorage.getItem("currentEditToken");
+      if (!token) return;
+
+      const response = await fetch(`/api/edit/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        console.warn("Save to server failed:", payload?.error ?? "unknown");
+      }
+    } catch {
+      console.warn("Save to server failed: network error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!publishResult) return;
+
+    const fullUrl = `${window.location.origin}${publishResult.publicUrl}`;
+
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopyLabel("已复制！");
+    } catch {
+      setCopyLabel("复制失败，请手动复制");
+    }
+
+    if (copyTimeout.current) clearTimeout(copyTimeout.current);
+    copyTimeout.current = setTimeout(() => setCopyLabel("复制公开链接"), 2000);
+  }
 
   const heroBtnText =
     heroSection
@@ -147,6 +228,74 @@ export function PageEditor({ initialContent }: Props) {
           <h2 className="text-lg font-semibold text-slate-950">页面编辑器</h2>
           <p className="text-xs text-slate-500">修改后自动保存到当前浏览器</p>
         </div>
+
+        {/* Publish / Save buttons */}
+        {publishState === "success" && publishResult ? (
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-4 space-y-3">
+            <p className="text-sm font-semibold text-green-800">✅ 发布成功</p>
+            <div className="space-y-2 text-xs text-slate-600">
+              <div>
+                <span className="font-medium text-slate-800">公开页面：</span>
+                <a
+                  href={publishResult.publicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 text-blue-600 underline break-all"
+                >
+                  {window.location.origin}{publishResult.publicUrl}
+                </a>
+              </div>
+              <div>
+                <span className="font-medium text-slate-800">编辑链接：</span>
+                <span className="ml-1 text-slate-500 break-all select-all">
+                  {window.location.origin}{publishResult.editUrl}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-slate-950 px-4 text-xs font-medium text-white transition hover:bg-slate-800"
+              >
+                {copyLabel}
+              </button>
+              <a
+                href={publishResult.publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 transition hover:border-slate-400"
+              >
+                打开公开页面
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={publishState === "publishing"}
+              className="inline-flex h-9 items-center justify-center rounded-full bg-slate-950 px-4 text-xs font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
+            >
+              {publishState === "publishing" ? "发布中..." : "🚀 发布页面"}
+            </button>
+            {hasEditToken ? (
+              <button
+                type="button"
+                onClick={handleSaveToServer}
+                disabled={isSaving}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+              >
+                {isSaving ? "保存中..." : "💾 保存修改"}
+              </button>
+            ) : null}
+          </div>
+        )}
+
+        {publishError ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{publishError}</p>
+        ) : null}
 
         {/* Page Info */}
         <Collapsible title="📄 页面信息" defaultOpen>
