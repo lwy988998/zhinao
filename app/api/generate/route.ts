@@ -10,6 +10,7 @@ type GenerateParams = {
   style: ThemeStyle;
   primaryColor: PrimaryColor;
   contactAction: ContactActionType;
+  visualMode: boolean;
 };
 
 const pageTypes: PageType[] = ["personal_profile", "product_service", "local_business", "event_signup", "course_sales"];
@@ -62,6 +63,7 @@ function validateRequestBody(body: unknown): { success: true; data: GeneratePara
       style: body.style,
       primaryColor: body.primaryColor,
       contactAction: body.contactAction,
+      visualMode: body.visualMode === true,
     },
   };
 }

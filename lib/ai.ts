@@ -9,6 +9,7 @@ type GeneratePageContentParams = {
   style: ThemeStyle;
   primaryColor: PrimaryColor;
   contactAction: ContactActionType;
+  visualMode?: boolean;
 };
 
 type ChatCompletionResponse = {
@@ -142,6 +143,13 @@ ${presetsForPrompt()}
 - local_business → local_business_warm 或 editorial_collage
 - event_signup → event_campaign_dynamic 或 dynamic_visual 或 manifesto_dark
 - course_sales → course_sales_compact 或 manifesto_dark 或 dynamic_visual
+
+⚠️ visualMode 规则（当 visualMode 开启时,你必须优先选高级视觉预设）:
+- 任意 pageType + visualMode=1 → 强制从 editorial_collage / dynamic_visual / manifesto_dark 中选择
+- 作品集/摄影/设计 + visualMode=1 → editorial_collage
+- AI/科技/工具/产品 + visualMode=1 → dynamic_visual
+- 观点/宣言/品牌 + visualMode=1 → manifesto_dark
+- visualMode=0 或未指定 → 按原有 pageType/style 规则正常选择
 
 ⚠️ 高级预设选择逻辑（重要！根据用户输入判断）:
 - 用户提到"黑底""黑色""宣言""观点""酷""极简黑暗": → 选 manifesto_dark
@@ -338,8 +346,9 @@ ${presetsForPrompt()}
 12. 如果用户需要课程/流程: timeline 有≥3个 items, 每个带时间节点
 13. 如果用户需要作品集: gallery 有≥6个 items, 每个带 tag
 14. 输出纯 JSON,无装饰、无反引号、无代码块标记
-15. 所有interactionType不为"none"的section，必须附带完整交互内容（tabs/accordionItems/carouselSlides/modal等字段），不允许只设置interactionType而不给内容
-16. 每个交互后的状态都像一个完整的内容面板，至少有标题+描述+3个以上子项`;
+15. 所有interactionType不为"none"的section，必须附带完整交互内容
+16. 每个交互后的状态都像一个完整的内容面板
+17. 如果 visualMode=1，必须选择高级视觉预设，hero 必须有 mediaType/image/visualHint`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();
@@ -356,13 +365,27 @@ export function extractJSON(text: string) {
 }
 
 function buildUserPrompt(params: GeneratePageContentParams) {
+  const visualBlock = params.visualMode
+    ? `
+
+⚠️ 视觉增强模式已开启！你必须：
+- 从 editorial_collage / dynamic_visual / manifesto_dark 中选择 layoutPreset
+- backgroundMode 选 paper_collage / particle_flow / dark_manifesto
+- hero.layout 使用 visual / collage / immersive / manifesto 之一
+- hero.mediaType 设为 "image"，hero.mediaPrompt 提供具体视觉描述
+- hero.mediaPosition 设为 "right" 或 "background"
+- 至少一个 section 使用更丰富的视觉布局（collage/masonry/cards/quote）
+- 如果适用，添加 gallery 或 app_preview section
+- 整体视觉密度更高，更像经过专业设计的成品，不是纯工具排版`
+    : "";
+
   return `请严格按照系统提示中的 layoutPreset 选择规则生成 PageContent JSON。
 
 用户需求：${params.userInput}
 页面类型：${params.pageType}
 视觉风格：${params.style}
 主色调：${params.primaryColor}
-目标动作：${params.contactAction}
+目标动作：${params.contactAction}${visualBlock}
 
 重要要求：
 - 根据 pageType 选择对应的 layoutPreset（必须输出该字段）
@@ -446,7 +469,10 @@ export async function generatePageContent(params: GeneratePageContentParams): Pr
       }
 
       console.log(`[ai debug] provider=${provider.label} success`);
-      return normalizePageContent(parsed);
+      const pageContent = normalizePageContent(parsed);
+      // Preserve visualMode in the final output
+      if (params.visualMode) pageContent.visualMode = true;
+      return pageContent;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.log(`[ai debug] provider=${provider.label} failed: ${lastError.message}`);

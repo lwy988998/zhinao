@@ -239,8 +239,9 @@ function GenerateForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userInput: queryVisual ? `[视觉增强] ${userInput.trim()}` : userInput.trim(),
+          userInput: userInput.trim(),
           pageType, style, primaryColor, contactAction,
+          visualMode: queryVisual,
         }),
       });
       const payload = (await response.json()) as GenerateResponse;
@@ -292,6 +293,9 @@ function GenerateForm() {
         <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm sm:gap-3">
           <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">将生成</span>
           <span className="font-medium text-slate-900">{configSummary}</span>
+          {queryVisual ? (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">🎨 视觉增强</span>
+          ) : null}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">

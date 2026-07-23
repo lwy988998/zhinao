@@ -149,20 +149,40 @@ function enrichFAQ(content: PageContent): PageContent {
 }
 
 /**
- * Main entry point: enrich all interactive content in a page.
- * Only fills gaps — never overwrites existing quality content.
+ * Visual-mode enrichment: when visualMode is on, ensure the page has
+ * stronger visual assets, background mode, and hero visual hints.
  */
-export function enrichInteractiveContent(content: PageContent): PageContent {
-  let enriched = content;
+function enrichVisual(content: PageContent): PageContent {
+  if (!content.visualMode) return content;
 
-  enriched = enrichAppPreview(enriched);
-  enriched = enrichDashboard(enriched);
-  enriched = enrichGallery(enriched);
-  enriched = enrichTimeline(enriched);
-  enriched = enrichFAQ(enriched);
-  enriched = detectAppMode(enriched);
+  let enriched = { ...content };
 
-  return enriched;
+  // Ensure backgroundMode is set to a visual-rich option
+  if (!enriched.backgroundMode || enriched.backgroundMode === "plain") {
+    if (enriched.layoutPreset === "manifesto_dark") enriched.backgroundMode = "dark_manifesto";
+    else if (enriched.layoutPreset === "editorial_collage") enriched.backgroundMode = "paper_collage";
+    else if (enriched.layoutPreset === "dynamic_visual") enriched.backgroundMode = "particle_flow";
+    else enriched.backgroundMode = "soft_gradient";
+  }
+
+  // Ensure assets object exists
+  if (!enriched.assets) enriched.assets = {};
+
+  // Enrich hero section for visual impact
+  const enrichedSections = enriched.sections.map((section) => {
+    if (section.type !== "hero") return section;
+    // Use spread + cast to add visual fields
+    return {
+      ...section,
+      layout: (section.layout === "center" || !section.layout ? "visual" : section.layout),
+      mediaType: (section.mediaType ?? "image"),
+      mediaPrompt: (section.mediaPrompt ?? `A visually striking hero image for: ${enriched.pageTitle}`),
+      mediaPosition: (section.mediaPosition ?? "right"),
+      visualHint: (section.visualHint ?? "专业品牌视觉，高清质感"),
+    } as typeof section;
+  });
+
+  return { ...enriched, sections: enrichedSections };
 }
 
 /** Auto-set appMode based on section presence if AI omitted it */
@@ -178,4 +198,23 @@ function detectAppMode(content: PageContent): PageContent {
   if (hasGallery) return { ...content, appMode: "portfolio_app" };
 
   return content;
+}
+
+/**
+ * Main entry point: enrich all interactive content in a page.
+ * Only fills gaps — never overwrites existing quality content.
+ * visualMode gates more aggressive visual enrichment.
+ */
+export function enrichInteractiveContent(content: PageContent): PageContent {
+  let enriched = content;
+
+  enriched = enrichAppPreview(enriched);
+  enriched = enrichDashboard(enriched);
+  enriched = enrichGallery(enriched);
+  enriched = enrichTimeline(enriched);
+  enriched = enrichFAQ(enriched);
+  enriched = detectAppMode(enriched);
+  enriched = enrichVisual(enriched);
+
+  return enriched;
 }

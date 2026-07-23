@@ -349,6 +349,8 @@ export interface PageContent {
   interactionMode?: "static" | "interactive_light" | "interactive_showcase" | "interactive_demo";
   /** App-style page mode */
   appMode?: AppMode;
+  /** Visual enhancement mode — drives stronger visual output */
+  visualMode?: boolean;
   /** Optional top-level navigation for app-like pages */
   navigation?: {
     type: "top" | "side" | "hybrid";
