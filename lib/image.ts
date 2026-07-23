@@ -82,7 +82,7 @@ export async function generateImage(prompt: string): Promise<ImageResult> {
         size: "1792x1024",
         response_format: "url",
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(45000),
     });
 
     if (!response.ok) {
