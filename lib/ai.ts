@@ -110,6 +110,11 @@ export async function generatePageContent(params: GeneratePageContentParams): Pr
   }
 
   const endpoint = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  // 安全日志：只输出非敏感诊断信息
+  console.log("[ai debug] baseUrlEndsWithV1:", baseUrl.endsWith("/v1") || baseUrl.endsWith("/v1/"));
+  console.log("[ai debug] endpoint path:", new URL(endpoint).pathname);
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -127,8 +132,26 @@ export async function generatePageContent(params: GeneratePageContentParams): Pr
     }),
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  console.log("[ai debug] responseStatus:", response.status, "contentType:", contentType);
+
   if (!response.ok) {
+    // 尝试读取非 JSON 响应体用于诊断
+    if (!contentType.includes("application/json")) {
+      const textSample = await response.text().catch(() => "");
+      console.log("[ai debug] responseTextStartsWithHtml:", textSample.trimStart().startsWith("<"));
+      console.log("[ai debug] responseTextFirst100:", textSample.slice(0, 100));
+      throw new Error(`AI 上游返回了 HTML/非 JSON 响应（${response.status}），请检查 AI_BASE_URL 是否正确`);
+    }
     throw new Error(`AI API 请求失败：${response.status}`);
+  }
+
+  // 保护：非 JSON 响应不调用 .json()
+  if (!contentType.includes("application/json")) {
+    const textSample = await response.text().catch(() => "");
+    console.log("[ai debug] responseTextStartsWithHtml:", textSample.trimStart().startsWith("<"));
+    console.log("[ai debug] responseTextFirst100:", textSample.slice(0, 100));
+    throw new Error("AI 上游不是 JSON 响应，请检查接口地址和服务商兼容性");
   }
 
   const result = (await response.json()) as ChatCompletionResponse;

@@ -1,72 +1,69 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { PageContent } from "@/types/page";
+import { isValidPageContent } from "@/lib/pageValidation";
+import { Button } from "@/components/ui/Button";
+import { PageEditor } from "@/components/editor/PageEditor";
 
-function subscribeToStorage() {
-  return () => undefined;
-}
+type LoadState =
+  | { status: "empty" }
+  | { status: "invalid" }
+  | { status: "ready"; content: PageContent };
 
-function getStoredPageTitle() {
-  const raw = window.localStorage.getItem("currentPageContent");
-
-  if (!raw) {
-    return "";
-  }
-
+function loadContent(): LoadState {
   try {
-    const content = JSON.parse(raw) as PageContent;
-    return content.pageTitle || "未命名网页";
+    const raw = localStorage.getItem("currentPageContent");
+    if (!raw) return { status: "empty" };
+
+    const parsed = JSON.parse(raw);
+    if (!isValidPageContent(parsed)) return { status: "invalid" };
+
+    return { status: "ready", content: parsed as PageContent };
   } catch {
-    return "";
+    return { status: "invalid" };
   }
 }
 
-export default function EditorPlaceholderPage() {
-  const pageTitle = useSyncExternalStore(subscribeToStorage, getStoredPageTitle, () => "");
-  const hasPage = pageTitle.length > 0;
+export default function EditorPage() {
+  const [state] = useState<LoadState>(loadContent);
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900">
-      <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
-        {hasPage ? (
+  if (state.status === "empty") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900">
+        <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
           <div className="space-y-5">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-500">编辑器开发中</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">网页已生成</h1>
-              <p className="text-base text-slate-600">{pageTitle}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">还没有生成网页</h1>
+              <p className="text-base text-slate-600">请先生成一个网页，然后到编辑器进行修改。</p>
             </div>
-            <div className="flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/preview"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white transition hover:bg-slate-800"
-              >
-                查看预览
-              </Link>
-              <Link
-                href="/generate"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
-              >
-                重新生成
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">还没有生成网页，请先创建一个。</h1>
-              <p className="text-base text-slate-600">生成成功后会临时保存到当前浏览器。</p>
-            </div>
-            <Link
-              href="/generate"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              去生成网页
+            <Link href="/generate">
+              <Button size="lg">去生成网页</Button>
             </Link>
           </div>
-        )}
-      </section>
-    </main>
-  );
+        </section>
+      </main>
+    );
+  }
+
+  if (state.status === "invalid") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900">
+        <section className="w-full max-w-xl rounded-3xl border border-red-200 bg-white p-6 text-center shadow-sm sm:p-8">
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">数据无效</h1>
+              <p className="text-base text-slate-600">已保存的页面数据格式不正确，请重新生成。</p>
+            </div>
+            <Link href="/generate">
+              <Button size="lg">重新生成</Button>
+            </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return <PageEditor initialContent={state.content} />;
 }

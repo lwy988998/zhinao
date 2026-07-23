@@ -87,8 +87,14 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "未知错误";
     console.error("/api/generate", message);
 
+    // 透传安全诊断错误，其他错误归为通用提示
+    const safeMessages = ["AI API 未配置", "AI 上游"];
+    const clientMessage = safeMessages.some((prefix) => message.startsWith(prefix))
+      ? message
+      : "AI 生成失败，请稍后重试";
+
     return NextResponse.json(
-      { success: false, error: message === "AI API 未配置" ? message : "AI 生成失败，请稍后重试" },
+      { success: false, error: clientMessage },
       { status: 500 },
     );
   }
