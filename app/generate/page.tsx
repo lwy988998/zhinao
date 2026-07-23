@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LoadingSteps } from "@/components/ui/LoadingSteps";
@@ -54,9 +54,14 @@ const actionOptions = [
   { value: "email", label: "邮件联系" },
 ];
 
-export default function GeneratePage() {
+function GenerateForm() {
   const router = useRouter();
-  const [userInput, setUserInput] = useState("");
+  const searchParams = useSearchParams();
+  const [userInput, setUserInput] = useState(() => {
+    // Pre-fill from ?prompt= query param when present
+    const q = searchParams?.get("prompt");
+    return q ? decodeURIComponent(q) : "";
+  });
   const [pageType, setPageType] = useState<PageType>("product_service");
   const [style, setStyle] = useState<ThemeStyle>("minimal");
   const [primaryColor, setPrimaryColor] = useState<PrimaryColor>("blue");
@@ -212,5 +217,19 @@ export default function GeneratePage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-slate-50 text-slate-900">
+        <div className="flex items-center justify-center py-32">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+        </div>
+      </main>
+    }>
+      <GenerateForm />
+    </Suspense>
   );
 }
