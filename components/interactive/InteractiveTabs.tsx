@@ -21,6 +21,7 @@ export type TabData = {
 type Props = {
   tabs: TabData[];
   accentClass?: string;
+  onAction?: (label: string, value?: string) => void;
 };
 
 function StatusBadge({ status }: { status?: string }) {
@@ -39,7 +40,19 @@ function StatusBadge({ status }: { status?: string }) {
   );
 }
 
-export function InteractiveTabs({ tabs, accentClass = "text-slate-950" }: Props) {
+/** Default action: copy value to clipboard, show brief toast */
+function handleDefaultAction(label: string, value?: string) {
+  const text = value ?? label;
+  navigator.clipboard.writeText(text).catch(() => {});
+  const toast = document.createElement("div");
+  toast.className =
+    "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-lg";
+  toast.textContent = `已复制: ${label}`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+export function InteractiveTabs({ tabs, accentClass = "text-slate-950", onAction }: Props) {
   const [active, setActive] = useState(0);
   if (tabs.length === 0) return null;
 
@@ -120,6 +133,13 @@ export function InteractiveTabs({ tabs, accentClass = "text-slate-950" }: Props)
           <div className="mt-5">
             <button
               type="button"
+              onClick={() => {
+                if (onAction) {
+                  onAction(activeTab.actionLabel!, activeTab.actionValue);
+                } else {
+                  handleDefaultAction(activeTab.actionLabel!, activeTab.actionValue);
+                }
+              }}
               className="inline-flex h-10 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-medium text-white transition active:scale-95 hover:bg-slate-800"
             >
               {activeTab.actionLabel}

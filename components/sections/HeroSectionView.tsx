@@ -1,3 +1,5 @@
+"use client";
+
 import type { HeroSection } from "@/types/page";
 import { SectionShell } from "./SectionShell";
 import type { ThemeClasses } from "@/lib/theme";
@@ -32,6 +34,11 @@ function StatsBlock({
   );
 }
 
+function scrollToAction() {
+  const el = document.getElementById("section-contact") ?? document.getElementById("section-cta") ?? document.querySelector("footer");
+  if (el) el.scrollIntoView({ behavior: "smooth" });
+}
+
 export function HeroSectionView({ section, theme }: Props) {
   const layout = section.layout ?? "center";
   const primaryText = section.buttonText || section.primaryButtonText;
@@ -57,7 +64,8 @@ export function HeroSectionView({ section, theme }: Props) {
     return (
       <button
         type="button"
-        className="inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium transition-all active:scale-[0.97] bg-slate-950 text-white shadow-sm hover:shadow-md hover:bg-slate-800"
+        onClick={scrollToAction}
+        className="inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium transition-all active:scale-[0.97] bg-slate-950 text-white shadow-sm hover:shadow-md hover:bg-slate-800 cursor-pointer"
       >
         {primaryText}
       </button>
@@ -121,7 +129,8 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
               >
                 {section.secondaryButtonText}
               </button>
@@ -176,13 +185,14 @@ export function HeroSectionView({ section, theme }: Props) {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               {renderCTA()}
               {section.secondaryButtonText ? (
-                <button
-                  type="button"
-                  className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50"
-                >
-                  {section.secondaryButtonText}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
+              >
+                {section.secondaryButtonText}
+              </button>
+            ) : null}
             </div>
           </div>
 
@@ -241,7 +251,8 @@ export function HeroSectionView({ section, theme }: Props) {
             ) : (
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100 cursor-pointer"
               >
                 {primaryText}
               </button>
@@ -249,7 +260,8 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40 hover:bg-white/5"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40 hover:bg-white/5 cursor-pointer"
               >
                 {section.secondaryButtonText}
               </button>
@@ -287,13 +299,14 @@ export function HeroSectionView({ section, theme }: Props) {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               {renderCTA()}
               {section.secondaryButtonText ? (
-                <button
-                  type="button"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-slate-300 px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:bg-slate-50"
-                >
-                  {section.secondaryButtonText}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border border-slate-300 px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:bg-slate-50 cursor-pointer"
+              >
+                {section.secondaryButtonText}
+              </button>
+            ) : null}
             </div>
           </div>
           <div className="relative flex flex-1 items-center justify-center">
@@ -371,7 +384,8 @@ export function HeroSectionView({ section, theme }: Props) {
             ) : (
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-white/90"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-white/90 cursor-pointer"
               >
                 {primaryText}
               </button>
@@ -379,7 +393,8 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40 cursor-pointer"
               >
                 {section.secondaryButtonText}
               </button>
@@ -404,13 +419,14 @@ export function HeroSectionView({ section, theme }: Props) {
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           {renderCTA()}
           {section.secondaryButtonText ? (
-            <button
-              type="button"
-              className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50"
-            >
-              {section.secondaryButtonText}
-            </button>
-          ) : null}
+              <button
+                type="button"
+                onClick={scrollToAction}
+                className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
+              >
+                {section.secondaryButtonText}
+              </button>
+            ) : null}
         </div>
         {hasStats ? (
           <div className="mt-10 w-full max-w-2xl">

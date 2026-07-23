@@ -27,6 +27,7 @@ type Props = {
   actionValue?: string;
   children?: ReactNode;
   triggerClassName?: string;
+  onAction?: (label: string, value?: string) => void;
 };
 
 export function InteractiveModal({
@@ -36,8 +37,10 @@ export function InteractiveModal({
   highlights,
   items,
   actionLabel,
+  actionValue,
   children,
   triggerClassName,
+  onAction,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -137,6 +140,20 @@ export function InteractiveModal({
               <div className="mt-5">
                 <button
                   type="button"
+                  onClick={() => {
+                    if (onAction) {
+                      onAction(actionLabel, actionValue);
+                    } else {
+                      const text = actionValue ?? actionLabel;
+                      navigator.clipboard.writeText(text).catch(() => {});
+                      const toast = document.createElement("div");
+                      toast.className =
+                        "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-lg";
+                      toast.textContent = `已复制: ${actionLabel}`;
+                      document.body.appendChild(toast);
+                      setTimeout(() => toast.remove(), 2000);
+                    }
+                  }}
                   className="inline-flex h-10 w-full items-center justify-center rounded-full bg-slate-950 text-sm font-medium text-white transition active:scale-95 hover:bg-slate-800"
                 >
                   {actionLabel}

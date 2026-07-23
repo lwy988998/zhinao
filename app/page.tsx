@@ -30,11 +30,11 @@ const EXAMPLES = [
 ];
 
 const TOOLS = [
-  { icon: "⚡", label: "自动" },
-  { icon: "🖼️", label: "图片" },
-  { icon: "🎨", label: "风格" },
-  { icon: "📄", label: "页面类型" },
-  { icon: "📞", label: "联系方式" },
+  { icon: "⚡", label: "自动", hint: "" },
+  { icon: "🖼️", label: "图片", hint: "配图版：" },
+  { icon: "🎨", label: "风格", hint: "风格：" },
+  { icon: "📄", label: "页面类型", hint: "类型：" },
+  { icon: "📞", label: "联系方式", hint: "联系方式：" },
 ];
 
 // ── Sub-components ──
@@ -49,11 +49,25 @@ function AnnouncementBar() {
 }
 
 function Sidebar() {
+  const scrollToExamples = () => {
+    const el = document.getElementById("home-examples");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const showComingSoon = (label: string) => {
+    const toast = document.createElement("div");
+    toast.className =
+      "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-medium text-white shadow-lg animate-pulse";
+    toast.textContent = `${label}功能即将上线`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  };
+
   const items = [
     { icon: "✦", label: "创建", href: "/generate", active: true },
-    { icon: "◇", label: "示例", href: "#", active: false },
-    { icon: "⬆", label: "发布", href: "#", active: false },
-    { icon: "⚙", label: "设置", href: "#", active: false },
+    { icon: "◇", label: "示例", href: null, active: false, onClick: scrollToExamples },
+    { icon: "⬆", label: "发布", href: "/editor", active: false },
+    { icon: "⚙", label: "设置", href: null, active: false, onClick: () => showComingSoon("设置") },
   ];
 
   return (
@@ -66,30 +80,54 @@ function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col items-center gap-1">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-[11px] leading-none transition ${
-              item.active
-                ? "bg-slate-100 text-slate-900 font-medium"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-            }`}
-          >
-            <span className="text-sm">{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {items.map((item) => {
+          const content = (
+            <>
+              <span className="text-sm">{item.icon}</span>
+              <span>{item.label}</span>
+            </>
+          );
+
+          if (item.href) {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-[11px] leading-none transition ${
+                  item.active
+                    ? "bg-slate-100 text-slate-900 font-medium"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={item.onClick}
+              className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-[11px] leading-none text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+              aria-label={item.label}
+            >
+              {content}
+            </button>
+          );
+        })}
       </nav>
 
       {/* Login placeholder */}
-      <Link
-        href="#"
-        className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-[11px] leading-none text-slate-400 hover:text-slate-600"
+      <button
+        type="button"
+        onClick={() => showComingSoon("登录")}
+        className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-[11px] leading-none text-slate-400 transition hover:text-slate-600"
+        aria-label="登录"
       >
         <span className="text-sm">👤</span>
         <span>登录</span>
-      </Link>
+      </button>
     </aside>
   );
 }
@@ -208,7 +246,17 @@ export default function Home() {
                       <button
                         key={t.label}
                         type="button"
+                        onClick={() => {
+                          const ta = document.querySelector("textarea") as HTMLTextAreaElement;
+                          if (ta) {
+                            ta.focus();
+                            if (t.hint && !prompt.startsWith(t.hint)) {
+                              setPrompt((prev) => t.hint + " " + prev);
+                            }
+                          }
+                        }}
                         className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                        aria-label={t.label}
                       >
                         <span className="text-[13px]">{t.icon}</span>
                         <span className="hidden sm:inline">{t.label}</span>
@@ -244,7 +292,7 @@ export default function Home() {
             </div>
 
             {/* ── Examples ── */}
-            <div className="space-y-2">
+            <div id="home-examples" className="space-y-2">
               <p className="text-center text-xs font-medium uppercase tracking-wide text-slate-400">
                 试试这些
               </p>

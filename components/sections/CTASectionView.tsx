@@ -1,3 +1,5 @@
+"use client";
+
 import type { CTASection } from "@/types/page";
 import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "./SectionShell";
@@ -8,6 +10,20 @@ type Props = {
   theme: ThemeClasses;
 };
 
+/**
+ * Scroll to the #section-contact or #section-cta target when a CTA button
+ * is clicked on a public/rendered page.
+ */
+function scrollToAction() {
+  const contactEl =
+    document.getElementById("section-contact") ??
+    document.getElementById("section-cta") ??
+    document.querySelector("footer");
+  if (contactEl) {
+    contactEl.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
 export function CTASectionView({ section, theme }: Props) {
   const layout = section.layout ?? "banner";
   const interactionType = section.interactionType ?? "none";
@@ -16,10 +32,10 @@ export function CTASectionView({ section, theme }: Props) {
   const renderButton = (variant: "light" | "dark" | "accent" = "accent") => {
     const className =
       variant === "light"
-        ? "inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100"
+        ? "inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100 cursor-pointer"
         : variant === "dark"
-        ? "inline-flex h-12 items-center justify-center rounded-full bg-slate-950 px-8 text-sm font-semibold text-white transition-all active:scale-[0.97] hover:bg-slate-800"
-        : `inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium text-white transition-all active:scale-[0.97] ${theme.bg} ${theme.buttonHover} shadow-sm hover:shadow-md`;
+        ? "inline-flex h-12 items-center justify-center rounded-full bg-slate-950 px-8 text-sm font-semibold text-white transition-all active:scale-[0.97] hover:bg-slate-800 cursor-pointer"
+        : `inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium text-white transition-all active:scale-[0.97] ${theme.bg} ${theme.buttonHover} shadow-sm hover:shadow-md cursor-pointer`;
 
     if (interactionType === "modal" && section.modalTitle) {
       return (
@@ -37,7 +53,7 @@ export function CTASectionView({ section, theme }: Props) {
     }
 
     return (
-      <button type="button" className={className}>
+      <button type="button" onClick={scrollToAction} className={className}>
         {section.buttonText}
       </button>
     );

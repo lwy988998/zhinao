@@ -150,8 +150,13 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
       {renderableSections.length > 0 ? (
         renderableSections.map((section, index) => {
           const bg = section.type === "cta" ? "" : sectionBg(index, section, tokens, preset);
+          // Use stable IDs for scroll targets
+          const wrapperId =
+            section.type === "contact" ? "section-contact" :
+            section.type === "cta" ? "section-cta" :
+            section.id;
           return (
-            <div id={section.id} key={section.id ?? section.type} className={bg}>
+            <div id={wrapperId} key={section.id ?? section.type} className={bg}>
               {renderSection(section, theme)}
             </div>
           );
