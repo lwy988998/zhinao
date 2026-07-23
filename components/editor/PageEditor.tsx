@@ -132,7 +132,9 @@ export function PageEditor({ initialContent }: Props) {
       return false;
     }
   });
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMessage, setSaveMessage] = useState("");
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copyLabel, setCopyLabel] = useState("复制公开链接");
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -176,11 +178,16 @@ export function PageEditor({ initialContent }: Props) {
   }
 
   async function handleSaveToServer() {
-    setIsSaving(true);
+    setSaveState("saving");
+    setSaveMessage("");
 
     try {
       const token = localStorage.getItem("currentEditToken");
-      if (!token) return;
+      if (!token) {
+        setSaveState("error");
+        setSaveMessage("未找到编辑令牌");
+        return;
+      }
 
       const response = await fetch(`/api/edit/${token}`, {
         method: "POST",
@@ -188,15 +195,26 @@ export function PageEditor({ initialContent }: Props) {
         body: JSON.stringify({ content }),
       });
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        console.warn("Save to server failed:", payload?.error ?? "unknown");
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.success) {
+        setSaveState("error");
+        setSaveMessage(payload?.error ?? "保存失败");
+        return;
       }
+
+      setSaveState("saved");
+      setSaveMessage("已保存到服务器");
     } catch {
-      console.warn("Save to server failed: network error");
-    } finally {
-      setIsSaving(false);
+      setSaveState("error");
+      setSaveMessage("网络错误，保存失败");
     }
+
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      setSaveState("idle");
+      setSaveMessage("");
+    }, 3000);
   }
 
   async function handleCopyLink() {
@@ -268,6 +286,13 @@ export function PageEditor({ initialContent }: Props) {
               >
                 打开公开页面
               </a>
+              <button
+                type="button"
+                onClick={() => setPublishState("idle")}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 transition hover:border-slate-400"
+              >
+                继续编辑
+              </button>
             </div>
           </div>
         ) : (
@@ -284,10 +309,16 @@ export function PageEditor({ initialContent }: Props) {
               <button
                 type="button"
                 onClick={handleSaveToServer}
-                disabled={isSaving}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-60"
+                disabled={saveState === "saving"}
+                className={`inline-flex h-9 items-center justify-center rounded-full border px-4 text-xs font-medium transition disabled:opacity-60 ${
+                  saveState === "saved"
+                    ? "border-green-300 bg-green-50 text-green-700"
+                    : saveState === "error"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                }`}
               >
-                {isSaving ? "保存中..." : "💾 保存修改"}
+                {saveState === "saving" ? "保存中..." : saveState === "saved" ? "✅ 已保存" : saveState === "error" ? "❌ 失败" : "💾 保存修改"}
               </button>
             ) : null}
           </div>
@@ -295,6 +326,14 @@ export function PageEditor({ initialContent }: Props) {
 
         {publishError ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{publishError}</p>
+        ) : null}
+
+        {saveMessage ? (
+          <p className={`rounded-xl border px-3 py-2 text-xs ${
+            saveState === "saved"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}>{saveMessage}</p>
         ) : null}
 
         {/* Page Info */}

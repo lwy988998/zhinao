@@ -19,6 +19,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: record.content.seo.title || record.content.pageTitle,
     description: record.content.seo.description || record.content.pageDescription,
+    openGraph: {
+      title: record.content.seo.title || record.content.pageTitle,
+      description: record.content.seo.description || record.content.pageDescription,
+      type: "website",
+    },
   };
 }
 

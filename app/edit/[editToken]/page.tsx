@@ -89,8 +89,9 @@ export default function EditPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900">
         <section className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center">
-          <h1 className="text-lg font-semibold text-slate-950">加载失败</h1>
+          <h1 className="text-lg font-semibold text-slate-950">无法加载页面</h1>
           <p className="mt-2 text-sm text-slate-500">{state.message}</p>
+          <p className="mt-1 text-xs text-slate-400">编辑链接可能已过期或从未发布。</p>
           <div className="mt-4">
             <Link href="/">
               <Button variant="outline" size="sm">

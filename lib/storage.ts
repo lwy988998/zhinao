@@ -68,6 +68,12 @@ export async function savePublishedPage(content: PageContent): Promise<{
 
   await writeFile(pagePath(pageId), JSON.stringify(record, null, 2), "utf-8");
 
+  // 保存一份带时间戳的备份
+  const backupPath = path.join(DATA_DIR, `${pageId}.${Date.now()}.bak.json`);
+  await writeFile(backupPath, JSON.stringify(record, null, 2), "utf-8").catch(() => {
+    // 备份失败不影响主流程
+  });
+
   return {
     pageId,
     editToken,

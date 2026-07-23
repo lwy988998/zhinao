@@ -35,8 +35,8 @@ export default function EditorPage() {
         <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
           <div className="space-y-5">
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">还没有生成网页</h1>
-              <p className="text-base text-slate-600">请先生成一个网页，然后到编辑器进行修改。</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">暂无编辑内容</h1>
+              <p className="text-base text-slate-600">请先通过 AI 生成网页，再进入编辑器调整内容和样式。</p>
             </div>
             <Link href="/generate">
               <Button size="lg">去生成网页</Button>
@@ -53,8 +53,8 @@ export default function EditorPage() {
         <section className="w-full max-w-xl rounded-3xl border border-red-200 bg-white p-6 text-center shadow-sm sm:p-8">
           <div className="space-y-5">
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">数据无效</h1>
-              <p className="text-base text-slate-600">已保存的页面数据格式不正确，请重新生成。</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">数据格式异常</h1>
+              <p className="text-base text-slate-600">已保存的页面数据结构不正确，无法正常编辑。请重新生成一个新的页面。</p>
             </div>
             <Link href="/generate">
               <Button size="lg">重新生成</Button>
