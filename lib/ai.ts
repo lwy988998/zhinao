@@ -233,6 +233,55 @@ ${presetsForPrompt()}
        items: [{ title, description?, imageUrl?, tag? }] }
 
 ════════════════════════════════
+▌交互内容强制规则（最高优先级）
+════════════════════════════════
+
+⚠️ 这是最重要的规则！交互后的每个状态都必须像一个完整的小页面或完整内容面板。
+
+▸ 如果生成 interactionType="tabs":
+  - 每个 tab 必须包含: label, title, description, 至少 3 个 items
+  - 每个 item 包含: title, description
+  - items 的 content 要具体、有信息量，不能只是占位
+
+▸ 如果生成 interactionType="accordion" (feature/faq):
+  - features.accordionItems: 每个包含 title, description, highlights(≥2), items(≥3)
+  - faq.accordionItems: 每个包含 question, answer, highlights(可选的附加说明) 
+  - FAQ 默认 interactionType="accordion"，至少 5 项
+
+▸ 如果生成 interactionType="carousel":
+  - features.carouselSlides / testimonials.carouselSlides: 至少 3 页
+  - 每页包含 title, description, highlights(≥2), items(≥2)
+
+▸ 如果生成 interactionType="modal" (hero/cta):
+  - hero.modalTitle, hero.modalDescription, hero.modalHighlights(≥3), hero.modalActionLabel
+  - cta 同上 modalTitle/modalDescription/modalHighlights/modalActionLabel
+
+▸ 如果生成 app_preview:
+  - 至少 3 个 views, 每个 view 包含 id, label, title, description, items(≥3)
+  - 每个 item 包含 title, description, meta 或 status
+  - dashboard view 的 items 至少 4 个（用 meta 作数值）
+  - kanban view 的 items 带 status 值: pending/active/review
+
+▸ 如果生成 dashboard:
+  - 至少 4 个 metrics: label, value, change
+  - 至少 4 个 cards: title, description, value, status
+  - status 值用 active/done/pending/alert
+
+▸ 如果生成 gallery:
+  - 至少 6 个 items: title, description, tag
+  - 不需要 imageUrl（系统会后续填充）
+
+▸ 如果生成 timeline:
+  - 至少 4 个 items: time, title, description
+  - time 格式如 "第1周" / "Day 1-3" / "3月12日"
+
+⚠️ 所有交互后的内容要具体、有信息量，不要空泛。
+不允许生成只有 label 和 title 但没有 items 的 tab。
+不允许生成只有 title 没有 description 的 modal。
+不允许生成 items 少于 3 的 carousel 页。
+不允许生成 content 只有 "暂无内容" 或占位文本的交互组件。
+
+════════════════════════════════
 ▌应用型 section 使用规则
 ════════════════════════════════
 
@@ -288,7 +337,9 @@ ${presetsForPrompt()}
 11. 如果用户需要仪表盘: dashboard 有≥4个 metrics + ≥3个 cards
 12. 如果用户需要课程/流程: timeline 有≥3个 items, 每个带时间节点
 13. 如果用户需要作品集: gallery 有≥6个 items, 每个带 tag
-14. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
+14. 输出纯 JSON,无装饰、无反引号、无代码块标记
+15. 所有interactionType不为"none"的section，必须附带完整交互内容（tabs/accordionItems/carouselSlides/modal等字段），不允许只设置interactionType而不给内容
+16. 每个交互后的状态都像一个完整的内容面板，至少有标题+描述+3个以上子项`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();

@@ -1,6 +1,12 @@
 import type { FeaturesSection } from "@/types/page";
 import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "./SectionShell";
+import { InteractiveTabs } from "@/components/interactive/InteractiveTabs";
+import type { TabData } from "@/components/interactive/InteractiveTabs";
+import { InteractiveAccordion } from "@/components/interactive/InteractiveAccordion";
+import type { AccordionItemData } from "@/components/interactive/InteractiveAccordion";
+import { InteractiveCarousel } from "@/components/interactive/InteractiveCarousel";
+import type { CarouselSlideData } from "@/components/interactive/InteractiveCarousel";
 
 type Props = {
   section: FeaturesSection;
@@ -12,8 +18,125 @@ export function FeaturesSectionView({ section, theme }: Props) {
   const subtitle = section.subtitle ?? section.description;
   const layout = section.layout ?? "grid";
   const highlightIdx = section.highlightIndex;
+  const interactionType = section.interactionType ?? "none";
 
-  // ── Numbered layout (01 / 02 / 03 — for manifesto/editorial) ──
+  // ── Interactive: Tabs ──
+  if (interactionType === "tabs" && section.tabs && section.tabs.length > 0) {
+    const tabData: TabData[] = section.tabs.map((t) => ({
+      label: t.label,
+      title: t.title,
+      description: t.description,
+      highlights: t.highlights,
+      actionLabel: t.actionLabel,
+      actionValue: t.actionValue,
+      items: (t.items ?? []).map((ti) => ({
+        title: ti.title,
+        description: ti.description,
+      })),
+    }));
+
+    return (
+      <SectionShell bg="bg-white">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
+          ) : null}
+        </div>
+        <div className="mx-auto max-w-3xl">
+          <InteractiveTabs tabs={tabData} accentClass={theme.text} />
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Interactive: Accordion ──
+  if (interactionType === "accordion" && section.accordionItems && section.accordionItems.length > 0) {
+    const accordionData: AccordionItemData[] = section.accordionItems.map((a) => ({
+      title: a.title,
+      description: a.description,
+      highlights: a.highlights,
+      meta: a.meta,
+      status: a.status,
+      items: (a.items ?? []).map((ai) => ({
+        title: ai.title,
+        description: ai.description,
+      })),
+    }));
+
+    return (
+      <SectionShell bg="bg-white">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
+          ) : null}
+        </div>
+        <div className="mx-auto max-w-3xl">
+          <InteractiveAccordion items={accordionData} accentClass={theme.text} />
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Interactive: Carousel ──
+  if (interactionType === "carousel" && section.carouselSlides && section.carouselSlides.length > 0) {
+    const slideData: CarouselSlideData[] = section.carouselSlides.map((s) => ({
+      title: s.title,
+      description: s.description,
+      meta: s.meta,
+      status: s.status,
+      highlights: s.highlights,
+      items: (s.items ?? []).map((si) => ({
+        title: si.title,
+        description: si.description,
+      })),
+    }));
+
+    return (
+      <SectionShell bg="bg-white">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
+          ) : null}
+        </div>
+        <div className="mx-auto max-w-2xl">
+          <InteractiveCarousel slides={slideData} accentClass={theme.text} />
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Interactive: Grid Switch (use tabs for switching) ──
+  if (interactionType === "grid_switch" && section.tabs && section.tabs.length > 0) {
+    const tabData: TabData[] = section.tabs.map((t) => ({
+      label: t.label,
+      title: t.title,
+      description: t.description,
+      highlights: t.highlights,
+      items: (t.items ?? []).map((ti) => ({
+        title: ti.title,
+        description: ti.description,
+      })),
+    }));
+
+    return (
+      <SectionShell bg="bg-white">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
+          ) : null}
+        </div>
+        <div className="mx-auto max-w-3xl">
+          <InteractiveTabs tabs={tabData} accentClass={theme.text} />
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Numbered layout ──
   if (layout === "numbered") {
     return (
       <SectionShell bg="bg-transparent">
@@ -44,7 +167,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
     );
   }
 
-  // ── Collage layout (misaligned, rotated cards) ──
+  // ── Collage layout ──
   if (layout === "collage") {
     return (
       <SectionShell bg="bg-transparent">
@@ -53,9 +176,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
             {section.title}
           </h2>
           {subtitle ? (
-            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">
-              {subtitle}
-            </p>
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
           ) : null}
         </div>
         <div className="flex flex-wrap justify-center gap-6 px-4">
@@ -92,9 +213,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
             {section.title}
           </h2>
           {subtitle ? (
-            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">
-              {subtitle}
-            </p>
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">{subtitle}</p>
           ) : null}
         </div>
         <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
@@ -119,10 +238,9 @@ export function FeaturesSectionView({ section, theme }: Props) {
     );
   }
 
-  // ── Rest of layouts below ──
+  // ── Default: grid / cards / list (non-interactive) ──
   const inner = (
     <>
-      {/* Section header */}
       <div className="mb-10 space-y-3 text-center">
         <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
           {section.title}
@@ -134,7 +252,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
         ) : null}
       </div>
 
-      {/* ── Grid layout (default) ── */}
+      {/* Grid layout */}
       {layout === "grid" && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, i) => {
@@ -149,21 +267,13 @@ export function FeaturesSectionView({ section, theme }: Props) {
                 }`}
               >
                 {item.icon ? (
-                  <div className={`mb-3 text-2xl`}>{item.icon}</div>
+                  <div className="mb-3 text-2xl">{item.icon}</div>
                 ) : isHighlight ? (
-                  <div
-                    className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${theme.softBg}`}
-                  >
+                  <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${theme.softBg}`}>
                     <div className={`h-2 w-2 rounded-full ${theme.bg}`} />
                   </div>
                 ) : null}
-                <h3
-                  className={`text-lg font-semibold ${
-                    isHighlight ? theme.text : "text-slate-900"
-                  }`}
-                >
-                  {item.title}
-                </h3>
+                <h3 className={`text-lg font-semibold ${isHighlight ? theme.text : "text-slate-900"}`}>{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>
               </article>
             );
@@ -171,7 +281,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
         </div>
       )}
 
-      {/* ── Cards layout (larger, more visual) ── */}
+      {/* Cards layout */}
       {layout === "cards" && (
         <div className="space-y-4">
           {items.map((item, i) => {
@@ -185,11 +295,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
                     : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
                 }`}
               >
-                <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                    isHighlight ? `${theme.bg} text-white` : `${theme.softBg}`
-                  }`}
-                >
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isHighlight ? `${theme.bg} text-white` : theme.softBg}`}>
                   <span className="text-lg font-semibold">{i + 1}</span>
                 </div>
                 <div className="min-w-0">
@@ -202,14 +308,12 @@ export function FeaturesSectionView({ section, theme }: Props) {
         </div>
       )}
 
-      {/* ── List layout (compact, icon-led) ── */}
+      {/* List layout */}
       {layout === "list" && (
         <div className="grid gap-4 sm:grid-cols-2">
           {items.map((item) => (
             <div key={item.title} className="flex gap-3">
-              <span className={`mt-0.5 shrink-0 text-lg ${theme.text}`}>
-                {item.icon ?? "✦"}
-              </span>
+              <span className={`mt-0.5 shrink-0 text-lg ${theme.text}`}>{item.icon ?? "✦"}</span>
               <div>
                 <h3 className="text-base font-semibold text-slate-900">{item.title}</h3>
                 <p className="mt-0.5 text-sm leading-6 text-slate-500">{item.description}</p>
@@ -221,6 +325,5 @@ export function FeaturesSectionView({ section, theme }: Props) {
     </>
   );
 
-  // Wrap in SectionShell if layout is grid; cards/list use their own width
   return <SectionShell bg="bg-white">{inner}</SectionShell>;
 }

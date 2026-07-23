@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { GallerySection } from "@/types/page";
 import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "@/components/sections/SectionShell";
@@ -5,6 +8,13 @@ import { SectionShell } from "@/components/sections/SectionShell";
 type Props = {
   section: GallerySection;
   theme: ThemeClasses;
+};
+
+type GalleryItem = {
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  tag?: string;
 };
 
 /** Abstract placeholder pattern when no imageUrl */
@@ -17,14 +27,74 @@ function Placeholder({ index }: { index: number }) {
   ];
   return (
     <div
-      className="h-40 w-full rounded-xl"
+      className="h-44 w-full rounded-t-xl sm:h-48"
       style={{ background: patterns[index % patterns.length] }}
     />
   );
 }
 
+function DetailModal({ item, onClose }: { item: GalleryItem; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-4 pb-4 pt-16 backdrop-blur-sm sm:items-center sm:p-6">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭" onClick={onClose} />
+      <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="text-lg font-bold text-slate-950">{item.title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <div className="mt-4">
+          {/* Preview area */}
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.title}
+              className="w-full rounded-xl object-cover h-48 sm:h-56"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-40 w-full items-center justify-center rounded-xl bg-slate-100 text-4xl text-slate-300">
+              ✦
+            </div>
+          )}
+          {item.description ? (
+            <p className="mt-4 text-sm leading-relaxed text-slate-600">{item.description}</p>
+          ) : null}
+          {item.tag ? (
+            <div className="mt-4">
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                {item.tag}
+              </span>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-slate-950 text-sm font-medium text-white transition active:scale-95 hover:bg-slate-800"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GallerySectionView({ section, theme: _theme }: Props) {
-  const items = section.items ?? [];
+  const items = (section.items ?? []) as GalleryItem[];
+  const [selected, setSelected] = useState<GalleryItem | null>(null);
+
+  const handleClick = (item: GalleryItem) => {
+    setSelected(item);
+  };
 
   return (
     <SectionShell bg="bg-white">
@@ -37,16 +107,18 @@ export function GallerySectionView({ section, theme: _theme }: Props) {
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item, i) => (
-          <article
-            key={item.title}
-            className="group cursor-default overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-shadow hover:shadow-md"
+          <button
+            key={`${item.title}-${i}`}
+            type="button"
+            onClick={() => handleClick(item)}
+            className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-left shadow-sm transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           >
             {/* Image area */}
             {item.imageUrl ? (
               <img
                 src={item.imageUrl}
                 alt={item.title}
-                className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-48"
                 loading="lazy"
               />
             ) : (
@@ -64,12 +136,17 @@ export function GallerySectionView({ section, theme: _theme }: Props) {
                 ) : null}
               </div>
               {item.description ? (
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">{item.description}</p>
-              ) : null}
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.description}</p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-400">点击查看详情</p>
+              )}
             </div>
-          </article>
+          </button>
         ))}
       </div>
+
+      {/* Detail modal */}
+      {selected ? <DetailModal item={selected} onClose={() => setSelected(null)} /> : null}
     </SectionShell>
   );
 }

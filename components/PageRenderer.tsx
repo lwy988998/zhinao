@@ -3,6 +3,7 @@ import { getThemeClasses, getDesignTokens } from "@/lib/theme";
 import { getPreset } from "@/lib/layoutPresets";
 import type { LayoutPreset } from "@/lib/layoutPresets";
 import { VisualBackground } from "@/components/visual/VisualBackground";
+import { AppShellPreview } from "@/components/appBlocks/AppShellPreview";
 import { CTASectionView } from "@/components/sections/CTASectionView";
 import { ContactSectionView } from "@/components/sections/ContactSectionView";
 import { FAQSectionView } from "@/components/sections/FAQSectionView";
@@ -25,6 +26,10 @@ type Props = {
 
 function isRenderableSection(section: PageSection) {
   return section.visible !== false;
+}
+
+function hasAppShell(content: PageContent) {
+  return content.appMode === "app_preview" || content.appMode === "dashboard" || content.appMode === "knowledge_base" || content.appMode === "portfolio_app" || Boolean(content.navigation);
 }
 
 /** Picks an alternating background per section index + preset + design hint */
@@ -133,6 +138,35 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
   const bgMode = content.backgroundMode ?? preset?.backgroundMode ?? "plain";
   const sections = content.sections.filter(isRenderableSection);
   const isDark = bgMode === "dark_manifesto" || bgMode === "particle_flow";
+  const useShell = hasAppShell(content);
+
+  const renderableSections = sections.map((section, index) => ({
+    ...section,
+    id: section.id ?? `${section.type}-${index + 1}`,
+  }));
+
+  const mainContent = (
+    <>
+      {renderableSections.length > 0 ? (
+        renderableSections.map((section, index) => {
+          const bg = section.type === "cta" ? "" : sectionBg(index, section, tokens, preset);
+          return (
+            <div id={section.id} key={section.id ?? section.type} className={bg}>
+              {renderSection(section, theme)}
+            </div>
+          );
+        })
+      ) : (
+        <div className="flex items-center justify-center py-32">
+          <div className={`rounded-3xl border border-dashed px-10 py-16 text-center ${
+            isDark ? "border-white/20 text-white/50" : "border-slate-300 bg-white text-slate-400"
+          }`}>
+            当前页面没有可渲染的区块。
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   const inner = (
     <main className={isDark ? "text-white" : "min-h-screen bg-white text-slate-900"}>
@@ -154,23 +188,12 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
         </div>
       )}
 
-      {sections.length > 0 ? (
-        sections.map((section, index) => {
-          const bg = section.type === "cta" ? "" : sectionBg(index, section, tokens, preset);
-          return (
-            <div key={section.id ?? section.type} className={bg}>
-              {renderSection(section, theme)}
-            </div>
-          );
-        })
+      {useShell ? (
+        <AppShellPreview content={content} sections={renderableSections} theme={theme}>
+          {mainContent}
+        </AppShellPreview>
       ) : (
-        <div className="flex items-center justify-center py-32">
-          <div className={`rounded-3xl border border-dashed px-10 py-16 text-center ${
-            isDark ? "border-white/20 text-white/50" : "border-slate-300 bg-white text-slate-400"
-          }`}>
-            当前页面没有可渲染的区块。
-          </div>
-        </div>
+        mainContent
       )}
     </main>
   );

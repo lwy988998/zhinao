@@ -52,6 +52,31 @@ export interface ContactAction {
   value: string;
 }
 
+// ── Rich interactive content types ──
+
+export interface InteractiveDetail {
+  title: string;
+  description?: string;
+  highlights?: string[];
+  items?: InteractiveItem[];
+  actionLabel?: string;
+  actionType?: "open" | "copy" | "anchor" | "link";
+  actionValue?: string;
+}
+
+export interface InteractiveItem {
+  title: string;
+  description?: string;
+  value?: string;
+  meta?: string;
+  status?: string;
+  highlights?: string[];
+  details?: InteractiveDetail;
+  actionLabel?: string;
+  actionType?: "open" | "copy" | "anchor" | "link";
+  actionValue?: string;
+}
+
 // ── Pricing item ──
 
 type PricingItem = {
@@ -98,13 +123,14 @@ export interface HeroSection extends BaseSection {
   mediaFit?: "cover" | "contain";
   // Interaction support
   interactionType?: "none" | "tabs" | "carousel" | "modal" | "sticky" | "copy_action";
-  interactiveItems?: Array<{
-    title: string;
-    description?: string;
-    value?: string;
-    actionLabel?: string;
-    actionType?: "open" | "copy" | "anchor" | "link";
-  }>;
+  interactiveItems?: InteractiveItem[];
+  /** Modal content when interactionType is "modal" */
+  modalTitle?: string;
+  modalDescription?: string;
+  modalHighlights?: string[];
+  modalItems?: InteractiveItem[];
+  modalActionLabel?: string;
+  modalActionValue?: string;
 }
 
 export interface FeaturesSection extends BaseSection {
@@ -121,7 +147,28 @@ export interface FeaturesSection extends BaseSection {
     label: string;
     title: string;
     description?: string;
-    items?: Array<{ title: string; description: string }>;
+    highlights?: string[];
+    actionLabel?: string;
+    actionValue?: string;
+    items?: InteractiveItem[];
+  }>;
+  /** Carousel slides when interactionType is "carousel" */
+  carouselSlides?: Array<{
+    title: string;
+    description?: string;
+    meta?: string;
+    status?: string;
+    highlights?: string[];
+    items?: InteractiveItem[];
+  }>;
+  /** Accordion items when interactionType is "accordion" */
+  accordionItems?: Array<{
+    title: string;
+    description?: string;
+    highlights?: string[];
+    items?: InteractiveItem[];
+    meta?: string;
+    status?: string;
   }>;
 }
 
@@ -202,7 +249,17 @@ export interface TestimonialsSection extends BaseSection {
   interactionType?: "none" | "carousel" | "tabs";
   tabs?: Array<{
     label: string;
+    title?: string;
+    description?: string;
     items: Array<{ name: string; role?: string; content: string }>;
+  }>;
+  /** Carousel slides when interactionType is "carousel" */
+  carouselSlides?: Array<{
+    title: string;
+    description?: string;
+    meta?: string;
+    highlights?: string[];
+    items?: Array<{ name: string; role?: string; content: string }>;
   }>;
 }
 
@@ -212,6 +269,13 @@ export interface FAQSection extends BaseSection {
   description?: string;
   items: Array<{ question: string; answer: string }>;
   interactionType?: "accordion" | "static";
+  /** Detailed answers when interactionType is "accordion" */
+  accordionItems?: Array<{
+    question: string;
+    answer: string;
+    highlights?: string[];
+    details?: InteractiveDetail;
+  }>;
 }
 
 export interface ContactSection extends BaseSection {
@@ -237,6 +301,13 @@ export interface CTASection extends BaseSection {
   interactionType?: "none" | "modal" | "copy_action" | "anchor";
   actionLabel?: string;
   actionValue?: string;
+  /** Modal content when interactionType is "modal" */
+  modalTitle?: string;
+  modalDescription?: string;
+  modalHighlights?: string[];
+  modalItems?: InteractiveItem[];
+  modalActionLabel?: string;
+  modalActionValue?: string;
 }
 
 // ── Union ──
