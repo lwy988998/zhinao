@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -54,58 +54,138 @@ const actionOptions = [
   { value: "email", label: "邮件联系" },
 ];
 
+// ── Labels for config summary ──
+const PAGE_TYPE_LABELS: Record<PageType, string> = {
+  personal_profile: "个人介绍页",
+  product_service: "产品服务页",
+  local_business: "门店介绍页",
+  event_signup: "活动报名页",
+  course_sales: "课程销售页",
+};
+
+const STYLE_LABELS: Record<ThemeStyle, string> = {
+  minimal: "极简干净",
+  business: "商务专业",
+  elegant: "温柔高级",
+  tech: "科技未来",
+  youthful: "活泼年轻",
+};
+
+const COLOR_LABELS: Record<PrimaryColor, string> = {
+  blue: "蓝色",
+  green: "绿色",
+  purple: "紫色",
+  orange: "橙色",
+  black_gold: "黑金",
+  pink: "粉色",
+};
+
+const CONTACT_LABELS: Record<ContactActionType, string> = {
+  wechat: "添加微信",
+  phone: "电话咨询",
+  form: "提交报名",
+  link: "了解产品",
+  email: "邮件联系",
+};
+
+// ── Valid values sets for param validation ──
+const VALID_PAGE_TYPES = new Set<string>(["personal_profile", "product_service", "local_business", "event_signup", "course_sales"]);
+const VALID_STYLES = new Set<string>(["minimal", "business", "elegant", "tech", "youthful"]);
+const VALID_COLORS = new Set<string>(["blue", "green", "purple", "orange", "black_gold", "pink"]);
+const VALID_CONTACTS = new Set<string>(["wechat", "phone", "form", "link", "email"]);
+
+function validatePageType(v: string | null): PageType {
+  return v && VALID_PAGE_TYPES.has(v) ? (v as PageType) : "product_service";
+}
+
+function validateStyle(v: string | null): ThemeStyle {
+  return v && VALID_STYLES.has(v) ? (v as ThemeStyle) : "minimal";
+}
+
+function validateColor(v: string | null): PrimaryColor {
+  return v && VALID_COLORS.has(v) ? (v as PrimaryColor) : "blue";
+}
+
+function validateContact(v: string | null): ContactActionType {
+  return v && VALID_CONTACTS.has(v) ? (v as ContactActionType) : "wechat";
+}
+
 function GenerateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [userInput, setUserInput] = useState(() => {
-    // Pre-fill from ?prompt= query param when present
+  const initializedRef = useRef(false);
+
+  // Read query params once on mount
+  const queryPrompt = useMemo(() => {
     const q = searchParams?.get("prompt");
-    return q ? decodeURIComponent(q) : "";
-  });
-  const [pageType, setPageType] = useState<PageType>("product_service");
-  const [style, setStyle] = useState<ThemeStyle>("minimal");
-  const [primaryColor, setPrimaryColor] = useState<PrimaryColor>("blue");
-  const [contactAction, setContactAction] = useState<ContactActionType>("wechat");
+    return q ? decodeURIComponent(q) : null;
+  }, [searchParams]);
+
+  const queryPageType = validatePageType(searchParams?.get("pageType") ?? null);
+  const queryStyle = validateStyle(searchParams?.get("style") ?? null);
+  const queryColor = validateColor(searchParams?.get("primaryColor") ?? null);
+  const queryContact = validateContact(searchParams?.get("contactAction") ?? null);
+  const queryVisual = (searchParams?.get("visualMode") ?? null) === "1";
+
+  // Whether we have at least one param from homepage
+  const hasQueryParams = useMemo(
+    () => Boolean(queryPrompt ?? searchParams?.get("pageType") ?? searchParams?.get("style") ?? searchParams?.get("primaryColor") ?? searchParams?.get("contactAction")),
+    [queryPrompt, searchParams],
+  );
+
+  const [userInput, setUserInput] = useState(() => queryPrompt ?? "");
+  const [pageType, setPageType] = useState<PageType>(queryPageType);
+  const [style, setStyle] = useState<ThemeStyle>(queryStyle);
+  const [primaryColor, setPrimaryColor] = useState<PrimaryColor>(queryColor);
+  const [contactAction, setContactAction] = useState<ContactActionType>(queryContact);
   const [inputError, setInputError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Mark as initialized after first render
   useEffect(() => {
-    if (!isLoading) {
-      return;
-    }
+    initializedRef.current = true;
+  }, []);
 
+  // Loading step animation
+  useEffect(() => {
+    if (!isLoading) return;
     const timer = window.setInterval(() => {
       setCurrentStep((step) => Math.min(step + 1, loadingSteps.length - 1));
     }, 900);
-
     return () => window.clearInterval(timer);
   }, [isLoading]);
 
+  // Config summary
+  const configSummary = useMemo(() => {
+    const parts = [
+      PAGE_TYPE_LABELS[pageType],
+      STYLE_LABELS[style],
+      COLOR_LABELS[primaryColor],
+      CONTACT_LABELS[contactAction],
+    ];
+    if (queryVisual) parts.push("视觉增强");
+    return parts.join(" · ");
+  }, [pageType, style, primaryColor, contactAction, queryVisual]);
+
   function validate() {
     const trimmed = userInput.trim();
-
     if (trimmed.length < 10) {
       setInputError("请提供至少 10 个字符的需求描述");
       return false;
     }
-
     if (trimmed.length > 1000) {
       setInputError("需求描述不能超过 1000 个字符");
       return false;
     }
-
     setInputError("");
     return true;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!validate()) {
-      return;
-    }
+    if (!validate()) return;
 
     setSubmitError("");
     setIsLoading(true);
@@ -115,11 +195,16 @@ function GenerateForm() {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInput.trim(), pageType, style, primaryColor, contactAction }),
+        body: JSON.stringify({
+          userInput: queryVisual ? `[视觉增强] ${userInput.trim()}` : userInput.trim(),
+          pageType,
+          style,
+          primaryColor,
+          contactAction,
+        }),
       });
 
       const payload = (await response.json()) as GenerateResponse;
-
       if (!response.ok || !payload.success) {
         setSubmitError(payload.success ? "AI 生成失败，请稍后重试" : payload.error);
         return;
@@ -154,6 +239,20 @@ function GenerateForm() {
           <p className="max-w-2xl text-base leading-7 text-slate-600">
             填写页面用途和偏好后，系统会调用真实 AI API 生成结构化 PageContent。
           </p>
+        </div>
+
+        {/* Source hint: when params came from homepage */}
+        {hasQueryParams ? (
+          <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+            <span className="text-base">🏠</span>
+            <span>已根据首页选择预填生成配置，你可以继续修改。</span>
+          </div>
+        ) : null}
+
+        {/* Config summary bar */}
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm sm:gap-3">
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">将生成</span>
+          <span className="font-medium text-slate-900">{configSummary}</span>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
@@ -222,13 +321,15 @@ function GenerateForm() {
 
 export default function GeneratePage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-slate-50 text-slate-900">
-        <div className="flex items-center justify-center py-32">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
-        </div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-50 text-slate-900">
+          <div className="flex items-center justify-center py-32">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+          </div>
+        </main>
+      }
+    >
       <GenerateForm />
     </Suspense>
   );
