@@ -8,19 +8,44 @@ type Props = {
 };
 
 export function CTASectionView({ section, theme }: Props) {
-  return (
-    <SectionShell>
-      <div className={`rounded-3xl p-8 text-center text-white shadow-sm sm:p-10 ${theme.bg}`.trim()}>
-        <div className="mx-auto max-w-3xl space-y-5">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.title}</h2>
-          <p className="text-base leading-7 text-white/90">{section.description}</p>
+  const layout = section.layout ?? "banner";
+
+  // ── Banner layout (full-width, solid color bar) ──
+  if (layout === "banner" || !layout) {
+    return (
+      <SectionShell bg={theme.bg} className="text-white">
+        <div className="flex flex-col items-center text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{section.title}</h2>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80">
+            {section.description}
+          </p>
           <button
             type="button"
-            className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-medium text-slate-950 transition hover:bg-slate-100"
+            className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100 hover:shadow-lg"
           >
             {section.buttonText}
           </button>
         </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Panel layout (card-like, softer, with border) ──
+  return (
+    <SectionShell bg="bg-white">
+      <div className={`rounded-2xl border p-8 text-center sm:p-10 ${theme.border} bg-gradient-to-br ${theme.gradient}`}>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          {section.title}
+        </h2>
+        <p className="mt-4 mx-auto max-w-xl text-base leading-relaxed text-slate-500">
+          {section.description}
+        </p>
+        <button
+          type="button"
+          className={`mt-6 inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium text-white transition-all active:scale-[0.97] ${theme.bg} ${theme.buttonHover} shadow-sm hover:shadow-md`}
+        >
+          {section.buttonText}
+        </button>
       </div>
     </SectionShell>
   );

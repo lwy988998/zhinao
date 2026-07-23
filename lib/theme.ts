@@ -11,6 +11,96 @@ export type ThemeClasses = {
   gradient: string;
 };
 
+export type DesignTokens = {
+  /** Section background presets */
+  sectionBg: {
+    white: string;
+    soft: string;
+    dark: string;
+    gradient: string;
+    accent: string;
+  };
+  /** Box shadow presets — subtle → prominent */
+  shadow: {
+    none: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    glow: string;
+  };
+  /** Border-radius presets */
+  radius: {
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    full: string;
+  };
+  /** Section divider styles */
+  divider: string;
+  /** Subtle border accent */
+  borderSubtle: string;
+  /** Card border on white bg */
+  cardBorder: string;
+};
+
+type BaseTokens = Omit<DesignTokens, "sectionBg"> & {
+  sectionBg: Omit<DesignTokens["sectionBg"], "accent" | "gradient">;
+};
+
+const baseTokens: BaseTokens = {
+  sectionBg: {
+    white: "bg-white",
+    soft: "bg-slate-50",
+    dark: "bg-slate-900",
+  },
+  shadow: {
+    none: "",
+    sm: "shadow-sm",
+    md: "shadow-md",
+    lg: "shadow-lg",
+    xl: "shadow-xl",
+    glow: "",
+  },
+  radius: {
+    sm: "rounded-lg",
+    md: "rounded-xl",
+    lg: "rounded-2xl",
+    xl: "rounded-3xl",
+    full: "rounded-full",
+  },
+  divider: "border-t border-slate-100",
+  borderSubtle: "border-slate-100",
+  cardBorder: "border border-slate-200/60",
+};
+
+const colorTokens: Record<PrimaryColor, { sectionBgAccent: string; shadowGlow: string }> = {
+  blue:   { sectionBgAccent: "bg-blue-50/60",   shadowGlow: "shadow-blue-100/50" },
+  green:  { sectionBgAccent: "bg-emerald-50/60", shadowGlow: "shadow-emerald-100/50" },
+  purple: { sectionBgAccent: "bg-violet-50/60",  shadowGlow: "shadow-violet-100/50" },
+  orange: { sectionBgAccent: "bg-orange-50/60",  shadowGlow: "shadow-orange-100/50" },
+  black_gold: { sectionBgAccent: "bg-stone-50",  shadowGlow: "shadow-amber-100/50" },
+  pink:   { sectionBgAccent: "bg-pink-50/60",    shadowGlow: "shadow-pink-100/50" },
+};
+
+export function getDesignTokens(primaryColor: PrimaryColor): DesignTokens {
+  const color = colorTokens[primaryColor] ?? colorTokens.blue;
+
+  return {
+    ...baseTokens,
+    sectionBg: {
+      ...baseTokens.sectionBg,
+      accent: color.sectionBgAccent,
+      gradient: `bg-gradient-to-b ${baseTokens.sectionBg.soft} ${baseTokens.sectionBg.white}`,
+    },
+    shadow: {
+      ...baseTokens.shadow,
+      glow: `shadow-lg ${color.shadowGlow}`,
+    },
+  };
+}
+
 export function getThemeClasses(primaryColor: PrimaryColor): ThemeClasses {
   const themes: Record<PrimaryColor, ThemeClasses> = {
     blue: {

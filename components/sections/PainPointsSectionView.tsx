@@ -1,27 +1,36 @@
 import type { PainPointsSection } from "@/types/page";
-import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "./SectionShell";
 
 type Props = {
   section: PainPointsSection;
-  theme: ThemeClasses;
 };
 
-export function PainPointsSectionView({ section, theme }: Props) {
+export function PainPointsSectionView({ section }: Props) {
   const items = section.items ?? [];
 
   return (
-    <SectionShell>
-      <div className="space-y-8">
-        <div className="space-y-3 text-center sm:text-left">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>
-          {section.description ? <p className="text-base leading-7 text-slate-600">{section.description}</p> : null}
+    <SectionShell bg="bg-white">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            {section.title}
+          </h2>
+          {section.description ? (
+            <p className="text-base leading-relaxed text-slate-500">{section.description}</p>
+          ) : null}
         </div>
-        <div className="space-y-3">
+
+        <div className="space-y-4">
           {items.map((item) => (
-            <article key={item.title} className={`rounded-2xl border px-5 py-4 ${theme.border} bg-rose-50`.trim()}>
-              <h3 className="text-base font-semibold text-rose-900">{item.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-slate-700">{item.description}</p>
+            <article
+              key={item.title}
+              className="flex items-start gap-4 rounded-2xl border border-rose-200/50 bg-rose-50/50 p-5"
+            >
+              <div className="mt-0.5 shrink-0 text-lg">⚠️</div>
+              <div>
+                <h3 className="text-base font-semibold text-rose-800">{item.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
+              </div>
             </article>
           ))}
         </div>

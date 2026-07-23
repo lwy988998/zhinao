@@ -11,6 +11,25 @@ export type PrimaryColor = "blue" | "green" | "purple" | "orange" | "black_gold"
 
 export type ContactActionType = "wechat" | "phone" | "form" | "link" | "email";
 
+// ── Layout variants ──
+
+export type HeroLayout = "center" | "split" | "visual";
+export type FeaturesLayout = "grid" | "cards" | "list";
+export type TestimonialsLayout = "cards" | "quote" | "avatars";
+export type CTALayout = "banner" | "panel";
+export type PricingLayout = "cards" | "table";
+
+// ── Shared design hint ──
+
+export interface DesignHint {
+  /** Background override for this section — AI can set e.g. "soft", "dark", "gradient", "none" */
+  bg?: string;
+  /** Nominal spacing tier: "compact" | "normal" | "airy" */
+  spacing?: string;
+}
+
+// ── Theme / SEO / Contact ──
+
 export interface PageTheme {
   style: ThemeStyle;
   primaryColor: PrimaryColor;
@@ -29,6 +48,8 @@ export interface ContactAction {
   value: string;
 }
 
+// ── Pricing item ──
+
 type PricingItem = {
   name: string;
   price: string;
@@ -37,12 +58,16 @@ type PricingItem = {
   highlighted?: boolean;
 };
 
+// ── Section types ──
+
 export interface BaseSection {
   id?: string;
   type: string;
   title?: string;
   description?: string;
   visible?: boolean;
+  /** Optional design hint the AI can set to guide the renderer */
+  design?: DesignHint;
 }
 
 export interface HeroSection extends BaseSection {
@@ -52,9 +77,14 @@ export interface HeroSection extends BaseSection {
   buttonText: string;
   buttonAction: string;
   image?: string;
-  /** Legacy aliases kept so existing mock previews can continue to render. */
+  // Legacy aliases
   primaryButtonText?: string;
   secondaryButtonText?: string;
+  // Layout & visual enrichments
+  layout?: HeroLayout;
+  badge?: string;
+  stats?: Array<{ label: string; value: string }>;
+  visualHint?: string; // e.g. "geometric shapes", "soft gradient", "photo left"
 }
 
 export interface FeaturesSection extends BaseSection {
@@ -63,6 +93,8 @@ export interface FeaturesSection extends BaseSection {
   subtitle?: string;
   description?: string;
   items: Array<{ title: string; description: string; icon?: string }>;
+  layout?: FeaturesLayout;
+  highlightIndex?: number; // 0-based — which card to emphasise
 }
 
 export interface PainPointsSection extends BaseSection {
@@ -91,8 +123,9 @@ export interface PricingSection extends BaseSection {
   title: string;
   description?: string;
   items: PricingItem[];
-  /** Legacy alias kept for old preview data. */
-  plans?: PricingItem[];
+  plans?: PricingItem[]; // legacy
+  layout?: PricingLayout;
+  featuredPlanIndex?: number;
 }
 
 export interface TestimonialsSection extends BaseSection {
@@ -100,6 +133,7 @@ export interface TestimonialsSection extends BaseSection {
   title: string;
   description?: string;
   items: Array<{ name: string; role?: string; content: string; avatar?: string }>;
+  layout?: TestimonialsLayout;
 }
 
 export interface FAQSection extends BaseSection {
@@ -118,7 +152,6 @@ export interface ContactSection extends BaseSection {
   email?: string;
   address?: string;
   qrcode?: string;
-  /** Legacy section-level action; new PRD uses PageContent.contactAction. */
   contactAction?: ContactAction;
 }
 
@@ -128,7 +161,10 @@ export interface CTASection extends BaseSection {
   description: string;
   buttonText: string;
   buttonAction: string;
+  layout?: CTALayout;
 }
+
+// ── Union ──
 
 export type PageSection =
   | HeroSection

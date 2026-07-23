@@ -40,7 +40,7 @@ function isSection(section: unknown): section is PageSection {
     return false;
   }
 
-  if (typeof section.title !== "string") {
+  if (typeof section.title !== "string" && section.title !== undefined) {
     return false;
   }
 
@@ -80,7 +80,6 @@ export function isValidPageContent(input: unknown): input is PageContent {
   const contactAction = isRecord(input.contactAction) ? input.contactAction : null;
   const theme = isRecord(input.theme) ? input.theme : null;
   const seo = isRecord(input.seo) ? input.seo : null;
-
   const sections = Array.isArray(input.sections) ? input.sections : null;
 
   return (
