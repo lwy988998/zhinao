@@ -220,6 +220,49 @@ ${presetsForPrompt()}
 ▸ contact { type: "contact", title, description, wechat?, phone?, email?, address?, qrcode? }
 ▸ cta { type: "cta", title, description, buttonText, buttonAction,
        layout?: "banner" | "panel" | "dark" | "minimal" }
+▸ app_preview { type: "app_preview", title, description?,
+       layout?: "sidebar_app" | "topbar_app" | "split_demo",
+       views: [{ id, label, title, description?,
+                items?: [{ title, description?, meta?, status? }] }] }
+▸ dashboard { type: "dashboard", title, description?,
+       metrics: [{ label, value, change? }],
+       cards: [{ title, description?, value?, status? }] }
+▸ timeline { type: "timeline", title, description?,
+       items: [{ time?, title, description? }] }
+▸ gallery { type: "gallery", title, description?,
+       items: [{ title, description?, imageUrl?, tag? }] }
+
+════════════════════════════════
+▌应用型 section 使用规则
+════════════════════════════════
+
+这是 zhinao 的核心进阶能力：你不是只生成静态落地页，
+你也生成可点击的应用原型预览（app_preview / dashboard / timeline / gallery）。
+
+选择规则：
+- 如果用户提到"工具""应用""管理""看板""仪表盘""系统""平台""demo""产品原型""SaaS""内部工具"：
+  → 设置 appMode: "app_preview" 或 "dashboard"
+  → 插入一个 app_preview 或 dashboard section（在 hero 之后 features 之前）
+  → app_preview 至少包含 3 个 views，每个 view 有 3-6 个 items
+  → dashboard 至少包含 4 个 metrics + 3-5 个 cards
+  → 数据要真实感：具体数字、百分比、状态值，不要空泛
+
+- 如果用户提到"课程""训练营""学习路径""活动流程""路线图"：
+  → 插入一个 timeline section
+  → 每条 timeline item 要有具体时间节点（如"第1周""Day 1-3""3月12日"）
+
+- 如果用户提到"作品集""案例""摄影""设计""项目展示"：
+  → 插入一个 gallery section
+  → 设置 appMode: "portfolio_app"
+  → 每个 gallery item 带 tag 标签
+  → 不需要 imageUrl（系统会后续填充）
+
+重要约束：
+- app_preview / dashboard 是与 hero/features/cta 混合使用的，不是替代
+- 页面仍然必须包含 hero 和 cta
+- 总 sections 数量仍控制在 6-10 个
+- views/items 中的文案要具体、可感知、像真实产品数据
+- 不要所有页面都加 app_preview，只在用户确实需要工具/应用/demo 页时才加
 
 ════════════════════════════════
 ▌参考设计模式
@@ -241,7 +284,11 @@ ${presetsForPrompt()}
    - editorial_collage: mediaPosition="right"
    - dynamic_visual: mediaPosition="background"
 9. 文案每句话都具体,符合 preset 行业语境
-10. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
+10. 如果用户需要工具/应用/demo 页: app_preview 有≥3个 views, 每个 view 有≥3个 items
+11. 如果用户需要仪表盘: dashboard 有≥4个 metrics + ≥3个 cards
+12. 如果用户需要课程/流程: timeline 有≥3个 items, 每个带时间节点
+13. 如果用户需要作品集: gallery 有≥6个 items, 每个带 tag
+14. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();

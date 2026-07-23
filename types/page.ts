@@ -20,6 +20,8 @@ export type CTALayout = "banner" | "panel" | "dark" | "minimal";
 export type PricingLayout = "cards" | "table";
 
 export type BackgroundMode = "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
+export type AppMode = "landing" | "app_preview" | "dashboard" | "knowledge_base" | "portfolio_app";
+export type InteractionMode = "static" | "interactive_light" | "interactive_showcase" | "interactive_demo";
 
 // ── Shared design hint ──
 
@@ -94,6 +96,15 @@ export interface HeroSection extends BaseSection {
   mediaPrompt?: string;
   mediaPosition?: "left" | "right" | "background" | "center";
   mediaFit?: "cover" | "contain";
+  // Interaction support
+  interactionType?: "none" | "tabs" | "carousel" | "modal" | "sticky" | "copy_action";
+  interactiveItems?: Array<{
+    title: string;
+    description?: string;
+    value?: string;
+    actionLabel?: string;
+    actionType?: "open" | "copy" | "anchor" | "link";
+  }>;
 }
 
 export interface FeaturesSection extends BaseSection {
@@ -105,6 +116,49 @@ export interface FeaturesSection extends BaseSection {
   layout?: FeaturesLayout;
   highlightIndex?: number; // 0-based — which card to emphasise
   itemImageUrls?: string[];
+  interactionType?: "none" | "tabs" | "accordion" | "carousel" | "grid_switch";
+  tabs?: Array<{
+    label: string;
+    title: string;
+    description?: string;
+    items?: Array<{ title: string; description: string }>;
+  }>;
+}
+
+export interface AppPreviewSection extends BaseSection {
+  type: "app_preview";
+  title: string;
+  description?: string;
+  layout?: "sidebar_app" | "topbar_app" | "split_demo";
+  views: Array<{
+    id: string;
+    label: string;
+    title: string;
+    description?: string;
+    items?: Array<{ title: string; description?: string; meta?: string; status?: string }>;
+  }>;
+}
+
+export interface DashboardSection extends BaseSection {
+  type: "dashboard";
+  title: string;
+  description?: string;
+  metrics: Array<{ label: string; value: string; change?: string }>;
+  cards: Array<{ title: string; description?: string; value?: string; status?: string }>;
+}
+
+export interface TimelineSection extends BaseSection {
+  type: "timeline";
+  title: string;
+  description?: string;
+  items: Array<{ time?: string; title: string; description?: string }>;
+}
+
+export interface GallerySection extends BaseSection {
+  type: "gallery";
+  title: string;
+  description?: string;
+  items: Array<{ title: string; description?: string; imageUrl?: string; tag?: string }>;
 }
 
 export interface PainPointsSection extends BaseSection {
@@ -145,6 +199,11 @@ export interface TestimonialsSection extends BaseSection {
   items: Array<{ name: string; role?: string; content: string; avatar?: string }>;
   layout?: TestimonialsLayout;
   avatarUrls?: string[];
+  interactionType?: "none" | "carousel" | "tabs";
+  tabs?: Array<{
+    label: string;
+    items: Array<{ name: string; role?: string; content: string }>;
+  }>;
 }
 
 export interface FAQSection extends BaseSection {
@@ -152,6 +211,7 @@ export interface FAQSection extends BaseSection {
   title: string;
   description?: string;
   items: Array<{ question: string; answer: string }>;
+  interactionType?: "accordion" | "static";
 }
 
 export interface ContactSection extends BaseSection {
@@ -174,6 +234,9 @@ export interface CTASection extends BaseSection {
   buttonAction: string;
   layout?: CTALayout;
   backgroundImageUrl?: string;
+  interactionType?: "none" | "modal" | "copy_action" | "anchor";
+  actionLabel?: string;
+  actionValue?: string;
 }
 
 // ── Union ──
@@ -188,7 +251,11 @@ export type PageSection =
   | TestimonialsSection
   | FAQSection
   | ContactSection
-  | CTASection;
+  | CTASection
+  | AppPreviewSection
+  | DashboardSection
+  | TimelineSection
+  | GallerySection;
 
 export interface PageContent {
   id?: string;
@@ -203,8 +270,39 @@ export interface PageContent {
   updatedAt?: string;
   /** Selected layout preset id — drives renderer defaults for hero bg, card style, rhythm */
   layoutPreset?: string;
+  /** Selected interaction preset id — drives interactivity defaults */
+  interactionPreset?: string;
   /** Background mode — visual background style for the entire page */
   backgroundMode?: "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
+  /** Interaction mode — overall interaction intensity */
+  interactionMode?: "static" | "interactive_light" | "interactive_showcase" | "interactive_demo";
+  /** App-style page mode */
+  appMode?: AppMode;
+  /** Optional top-level navigation for app-like pages */
+  navigation?: {
+    type: "top" | "side" | "hybrid";
+    items: Array<{
+      id: string;
+      label: string;
+      targetSectionId?: string;
+      icon?: string;
+    }>;
+  };
+  /** Optional view metadata for app-like pages */
+  views?: Array<{
+    id: string;
+    label: string;
+    title: string;
+    description?: string;
+    layout: "overview" | "dashboard" | "list" | "kanban" | "gallery" | "timeline" | "detail";
+    items?: Array<{
+      title: string;
+      description?: string;
+      meta?: string;
+      status?: string;
+      value?: string;
+    }>;
+  }>;
   /** AI-generated visual assets */
   assets?: {
     heroImageUrl?: string;

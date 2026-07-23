@@ -51,6 +51,10 @@ const SECTION_LABELS: Record<string, string> = {
   faq: "常见问题",
   contact: "联系方式",
   cta: "CTA 行动号召",
+  app_preview: "应用预览",
+  dashboard: "仪表盘",
+  timeline: "时间线",
+  gallery: "作品图库",
 };
 
 //

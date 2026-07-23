@@ -13,6 +13,10 @@ import { PricingSectionView } from "@/components/sections/PricingSectionView";
 import { ProcessSectionView } from "@/components/sections/ProcessSectionView";
 import { SolutionSectionView } from "@/components/sections/SolutionSectionView";
 import { TestimonialsSectionView } from "@/components/sections/TestimonialsSectionView";
+import { AppPreviewSectionView } from "@/components/appBlocks/AppPreviewSectionView";
+import { DashboardSectionView } from "@/components/appBlocks/DashboardSectionView";
+import { TimelineSectionView } from "@/components/appBlocks/TimelineSectionView";
+import { GallerySectionView } from "@/components/appBlocks/GallerySectionView";
 
 type Props = {
   content: PageContent;
@@ -109,6 +113,14 @@ function renderSection(
       return <ContactSectionView key={key} section={section} theme={theme} />;
     case "cta":
       return <CTASectionView key={key} section={section} theme={theme} />;
+    case "app_preview":
+      return <AppPreviewSectionView key={key} section={section} theme={theme} />;
+    case "dashboard":
+      return <DashboardSectionView key={key} section={section} theme={theme} />;
+    case "timeline":
+      return <TimelineSectionView key={key} section={section} theme={theme} />;
+    case "gallery":
+      return <GallerySectionView key={key} section={section} theme={theme} />;
     default:
       return null;
   }

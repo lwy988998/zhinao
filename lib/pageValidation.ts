@@ -57,6 +57,14 @@ function isSection(section: unknown): section is PageSection {
     case "testimonials":
     case "faq":
       return Array.isArray(section.items);
+    case "app_preview":
+      return Array.isArray(section.views);
+    case "dashboard":
+      return Array.isArray(section.metrics) && Array.isArray(section.cards);
+    case "timeline":
+      return Array.isArray(section.items);
+    case "gallery":
+      return Array.isArray(section.items);
     case "solution":
       return typeof section.description === "string" && Array.isArray(section.items);
     case "process":
