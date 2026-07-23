@@ -2,6 +2,7 @@ import type { PageContent, PageSection, CTASection } from "@/types/page";
 import { getThemeClasses, getDesignTokens } from "@/lib/theme";
 import { getPreset } from "@/lib/layoutPresets";
 import type { LayoutPreset } from "@/lib/layoutPresets";
+import { VisualBackground } from "@/components/visual/VisualBackground";
 import { CTASectionView } from "@/components/sections/CTASectionView";
 import { ContactSectionView } from "@/components/sections/ContactSectionView";
 import { FAQSectionView } from "@/components/sections/FAQSectionView";
@@ -117,15 +118,21 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
   const theme = getThemeClasses(content.theme.primaryColor);
   const tokens = getDesignTokens(content.theme.primaryColor);
   const preset = content.layoutPreset ? getPreset(content.layoutPreset) : undefined;
+  const bgMode = content.backgroundMode ?? preset?.backgroundMode ?? "plain";
   const sections = content.sections.filter(isRenderableSection);
+  const isDark = bgMode === "dark_manifesto" || bgMode === "particle_flow";
 
-  return (
-    <main className="min-h-screen bg-white text-slate-900">
+  const inner = (
+    <main className={isDark ? "text-white" : "min-h-screen bg-white text-slate-900"}>
       {/* Info strip — only in preview */}
       {mode === "preview" && (
         <div className="mx-auto max-w-6xl px-5 pt-5 sm:px-8">
-          <div className="mb-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-500 shadow-sm backdrop-blur">
-            <span className="font-semibold text-slate-800">{content.pageTitle}</span>
+          <div className={`mb-2 rounded-xl border px-4 py-2.5 text-sm shadow-sm backdrop-blur ${
+            isDark
+              ? "border-white/15 bg-white/5 text-white/70"
+              : "border-slate-200 bg-white/90 text-slate-500"
+          }`}>
+            <span className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>{content.pageTitle}</span>
             <span className="mx-2 text-slate-300">|</span>
             <span>
               {preset ? preset.name : content.pageType}
@@ -146,11 +153,21 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
         })
       ) : (
         <div className="flex items-center justify-center py-32">
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-10 py-16 text-center text-slate-400">
+          <div className={`rounded-3xl border border-dashed px-10 py-16 text-center ${
+            isDark ? "border-white/20 text-white/50" : "border-slate-300 bg-white text-slate-400"
+          }`}>
             当前页面没有可渲染的区块。
           </div>
         </div>
       )}
     </main>
+  );
+
+  if (bgMode === "plain") return inner;
+
+  return (
+    <VisualBackground mode={bgMode}>
+      {inner}
+    </VisualBackground>
   );
 }

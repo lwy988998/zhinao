@@ -119,6 +119,8 @@ PageContent 字段:
 - pageDescription: string   一句话概括(用于 SEO)
 - pageType: personal_profile | product_service | local_business | event_signup | course_sales
 - layoutPreset: string      必须从下方预设列表中选一个 id
+- backgroundMode: plain | soft_gradient | dark_manifesto | paper_collage | particle_flow
+                            必须与 layoutPreset 对应(见选择规则)
 - theme: {
     style: minimal | business | elegant | tech | youthful,
     primaryColor: blue | green | purple | orange | black_gold | pink,
@@ -135,11 +137,23 @@ PageContent 字段:
 ${presetsForPrompt()}
 
 选择规则:
-- personal_profile → personal_brand_elegant
-- product_service → product_service_modern
-- local_business → local_business_warm
-- event_signup → event_campaign_dynamic
-- course_sales → course_sales_compact
+- personal_profile → personal_brand_elegant 或 editorial_collage 或 manifesto_dark
+- product_service → product_service_modern 或 dynamic_visual 或 manifesto_dark
+- local_business → local_business_warm 或 editorial_collage
+- event_signup → event_campaign_dynamic 或 dynamic_visual 或 manifesto_dark
+- course_sales → course_sales_compact 或 manifesto_dark 或 dynamic_visual
+
+⚠️ 高级预设选择逻辑（重要！根据用户输入判断）:
+- 用户提到"黑底""黑色""宣言""观点""酷""极简黑暗": → 选 manifesto_dark
+- 用户提到"杂志""拼贴""作品集""摄影师""艺术""复古""纸质": → 选 editorial_collage
+- 用户提到"科技""AI""动态""粒子""深色""沉浸""未来""动感": → 选 dynamic_visual
+- 其他常规场景 → 选对应的基础预设
+
+⚠️ backgroundMode 必须与 layoutPreset 保持一致:
+- manifesto_dark → backgroundMode="dark_manifesto"
+- editorial_collage → backgroundMode="paper_collage"
+- dynamic_visual → backgroundMode="particle_flow"
+- 基础预设 → backgroundMode="plain" 或 "soft_gradient"
 
 ════════════════════════════════
 ▌视觉核心原则 - 必须遵守
@@ -152,6 +166,9 @@ ${presetsForPrompt()}
    - center 布局:居中大标题,适合个人品牌
    - split 布局:左文案右视觉区,适合产品/课程
    - visual 布局:全宽强视觉,有突出 stats 和 badge
+   - manifesto 布局:黑底白字超大标题,必须带 kicker + badge,适合宣言页
+   - collage 布局: 左侧文案右侧叠层纸卡片(rotation),适合杂志/作品集
+   - immersive 布局: 居中标题叠加粒子背景,适合科技/动态页
 
 3. ▌留白有节奏▐ - preset 的 sectionRhythm 决定整体节奏:
    - calm:宽松、优雅,section 间大量留白
@@ -182,10 +199,12 @@ ${presetsForPrompt()}
 所有模块继承:{ type, title?, description?, visible?, id?, design?: { bg?: string, spacing?: string } }
 
 ▸ hero { type: "hero", title, subtitle, buttonText, buttonAction, image?, secondaryButtonText?,
-        layout?: "center" | "split" | "visual", badge?: string,
+        layout?: "center" | "split" | "visual" | "manifesto" | "collage" | "immersive",
+        badge?: string, kicker?: string,
         stats?: [{ label, value }], visualHint?: string }
 ▸ features { type: "features", title, subtitle?, items: [{ title, description, icon? }],
-           layout?: "grid" | "cards" | "list", highlightIndex?: number }
+           layout?: "grid" | "cards" | "list" | "numbered" | "collage" | "masonry",
+           highlightIndex?: number }
 ▸ pain_points { type: "pain_points", title, description?, items: [{ title, description }] }
 ▸ solution { type: "solution", title, description, items: [{ title, description }] }
 ▸ process { type: "process", title, description?, steps: [{ title, description }] }
@@ -194,11 +213,11 @@ ${presetsForPrompt()}
            layout?: "cards" | "table", featuredPlanIndex?: number }
 ▸ testimonials { type: "testimonials", title, description?,
                 items: [{ name, role?, content, avatar? }],
-                layout?: "cards" | "quote" | "avatars" }
+                layout?: "cards" | "quote" | "avatars" | "editorial" }
 ▸ faq { type: "faq", title, description?, items: [{ question, answer }] }
 ▸ contact { type: "contact", title, description, wechat?, phone?, email?, address?, qrcode? }
 ▸ cta { type: "cta", title, description, buttonText, buttonAction,
-       layout?: "banner" | "panel" }
+       layout?: "banner" | "panel" | "dark" | "minimal" }
 
 ════════════════════════════════
 ▌参考设计模式
@@ -208,14 +227,15 @@ ${presetsForPrompt()}
 ════════════════════════════════
 ▌最终检查清单
 ════════════════════════════════
-1. layoutPreset 已选且正确(匹配 pageType)
-2. hero 必须有 layout(用 preset 指定的)
-3. hero 必须有 badge 或 stats(至少一个)
-4. testimonials 使用 preset 指定的 layout
-5. 至少一个 pricing/testimonials 设了 highlighted/featuredPlanIndex
-6. 不同 pageType 的模块顺序有明显差异
-7. 文案每句话都具体,符合 preset 行业语境
-8. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
+1. layoutPreset 已选且正确(匹配 pageType + 用户语气)
+2. backgroundMode 已选且与 layoutPreset 一致
+3. hero 必须有 layout(用 preset 指定的)
+4. manifest/collage/immersive hero 必须带 kicker 或 badge
+5. features 用 preset 指定的 layout (numbered/collage/masonry)
+6. 至少一个 pricing/testimonials 设了 highlighted/featuredPlanIndex
+7. 不同 pageType 的模块顺序有明显差异
+8. 文案每句话都具体,符合 preset 行业语境
+9. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();

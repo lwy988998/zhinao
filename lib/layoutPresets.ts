@@ -1,4 +1,4 @@
-import type { CTALayout, FeaturesLayout, HeroLayout, PageSection, PageType, TestimonialsLayout } from "@/types/page";
+import type { BackgroundMode, CTALayout, FeaturesLayout, HeroLayout, PageSection, PageType, TestimonialsLayout } from "@/types/page";
 
 export type LayoutPreset = {
   id: string;
@@ -16,6 +16,8 @@ export type LayoutPreset = {
   requiredSections: PageSection["type"][];
   /** Background style for sections */
   backgroundStyle: "soft_alternating" | "bold_blocks" | "white_only" | "dark_accent";
+  /** Full-page background mode */
+  backgroundMode: BackgroundMode;
   /** Card style */
   cardStyle: "elevated" | "subtle" | "bordered" | "colorful";
   /** Default CTA style */
@@ -42,6 +44,7 @@ const personalBrandElegant: LayoutPreset = {
   ],
   requiredSections: ["testimonials"],
   backgroundStyle: "soft_alternating",
+  backgroundMode: "soft_gradient",
   cardStyle: "bordered",
   ctaStyle: "panel",
   testimonyStyle: "quote",
@@ -70,6 +73,7 @@ const localBusinessWarm: LayoutPreset = {
   ],
   requiredSections: ["process", "contact"],
   backgroundStyle: "bold_blocks",
+  backgroundMode: "plain",
   cardStyle: "elevated",
   ctaStyle: "banner",
   testimonyStyle: "cards",
@@ -100,6 +104,7 @@ const courseSalesCompact: LayoutPreset = {
   ],
   requiredSections: ["pain_points", "pricing", "testimonials"],
   backgroundStyle: "white_only",
+  backgroundMode: "plain",
   cardStyle: "colorful",
   ctaStyle: "banner",
   testimonyStyle: "quote",
@@ -132,6 +137,7 @@ const productServiceModern: LayoutPreset = {
   ],
   requiredSections: ["pain_points", "solution", "pricing"],
   backgroundStyle: "soft_alternating",
+  backgroundMode: "soft_gradient",
   cardStyle: "elevated",
   ctaStyle: "banner",
   testimonyStyle: "cards",
@@ -163,6 +169,7 @@ const eventCampaignDynamic: LayoutPreset = {
   ],
   requiredSections: ["process"],
   backgroundStyle: "bold_blocks",
+  backgroundMode: "plain",
   cardStyle: "colorful",
   ctaStyle: "banner",
   testimonyStyle: "cards",
@@ -181,6 +188,94 @@ const eventCampaignDynamic: LayoutPreset = {
 - 背景用 bold_blocks 风格，大胆的颜色块切换`,
 };
 
+// ── ADVANCED Preset A: Manifesto Dark ──
+
+const manifestoDark: LayoutPreset = {
+  id: "manifesto_dark",
+  name: "宣言式 · 黑底强观点",
+  suitablePageTypes: ["product_service", "course_sales", "personal_profile", "event_signup"],
+  heroLayout: "manifesto",
+  sectionRhythm: "dynamic",
+  visualDensity: "medium",
+  preferredSections: [
+    "hero", "features", "testimonials", "process", "pricing", "faq", "contact", "cta",
+  ],
+  requiredSections: ["testimonials"],
+  backgroundStyle: "dark_accent",
+  backgroundMode: "dark_manifesto",
+  cardStyle: "subtle",
+  ctaStyle: "dark",
+  testimonyStyle: "quote",
+  featureStyle: "numbered",
+  promptGuidance: `打造一个黑底、高对比、强观点的宣言式页面：
+- hero.layout 使用 "manifesto"，黑底白字，超大标题
+- hero 必须带 kicker（如"ISSUE 01"）和 badge
+- hero.stats 展示关键数据（2-3 项）
+- features.layout 使用 "numbered"，大编号 01/02/03
+- cta.layout 使用 "dark"，黑底强转化
+- testimonials.layout 使用 "quote"，单条强引用
+- 整体配色极简黑灰白，少量高亮色点睛
+- 文案有观点感和宣言感`,
+};
+
+// ── ADVANCED Preset B: Editorial Collage ──
+
+const editorialCollage: LayoutPreset = {
+  id: "editorial_collage",
+  name: "编辑拼贴 · 杂志作品集",
+  suitablePageTypes: ["personal_profile", "local_business", "event_signup", "product_service"],
+  heroLayout: "collage",
+  sectionRhythm: "editorial",
+  visualDensity: "medium",
+  preferredSections: [
+    "hero", "features", "testimonials", "process", "pricing", "contact", "cta",
+  ],
+  requiredSections: ["testimonials"],
+  backgroundStyle: "soft_alternating",
+  backgroundMode: "paper_collage",
+  cardStyle: "elevated",
+  ctaStyle: "panel",
+  testimonyStyle: "editorial",
+  featureStyle: "collage",
+  promptGuidance: `打造一个杂志拼贴风格的作品集/品牌展示页：
+- hero.layout 使用 "collage"，左侧文案右侧叠层卡片
+- 整体纸质感背景（米白+纹理）
+- features.layout 使用 "collage"，卡片错落+旋转
+- testimonials.layout 使用 "editorial"，杂志摘录风
+- cta.layout 使用 "panel"，柔和卡片收口
+- 配色 warm/pink/purple 系，复古高级
+- 文案有编辑感和故事感`,
+};
+
+// ── ADVANCED Preset C: Dynamic Visual ──
+
+const dynamicVisual: LayoutPreset = {
+  id: "dynamic_visual",
+  name: "动态视觉 · 沉浸科技",
+  suitablePageTypes: ["product_service", "event_signup", "course_sales"],
+  heroLayout: "immersive",
+  sectionRhythm: "dynamic",
+  visualDensity: "medium",
+  preferredSections: [
+    "hero", "pain_points", "solution", "features", "testimonials", "pricing", "contact", "cta",
+  ],
+  requiredSections: ["pricing"],
+  backgroundStyle: "dark_accent",
+  backgroundMode: "particle_flow",
+  cardStyle: "elevated",
+  ctaStyle: "banner",
+  testimonyStyle: "cards",
+  featureStyle: "cards",
+  promptGuidance: `打造一个深色沉浸、科技动感的视觉页面：
+- hero.layout 使用 "immersive"，标题叠加粒子背景
+- hero 带 badge 和 stats（3 项以上数据）
+- features.layout 使用 "cards"，半透明/毛玻璃
+- pricing 必须设 featuredPlanIndex
+- cta.layout 使用 "banner"，深色底亮色按钮
+- 配色 blue/purple 系，科技感
+- 文案现代、数据感、未来感`,
+};
+
 // ── Master preset map ──
 
 export const layoutPresets: Record<string, LayoutPreset> = {
@@ -189,6 +284,9 @@ export const layoutPresets: Record<string, LayoutPreset> = {
   course_sales_compact: courseSalesCompact,
   product_service_modern: productServiceModern,
   event_campaign_dynamic: eventCampaignDynamic,
+  manifesto_dark: manifestoDark,
+  editorial_collage: editorialCollage,
+  dynamic_visual: dynamicVisual,
 };
 
 /** Returns all presets, sorted by id */
@@ -211,7 +309,7 @@ export function presetsForPrompt(): string {
   return getAllPresets()
     .map(
       (p) =>
-        `- ${p.id}（${p.name}）：适用于 ${p.suitablePageTypes.join(" / ")}↵  hero:${p.heroLayout} | rhythm:${p.sectionRhythm} | bg:${p.backgroundStyle} | sections:${p.preferredSections.join("→")}`,
+        `- ${p.id}（${p.name}）：适用于 ${p.suitablePageTypes.join(" / ")}↵  hero:${p.heroLayout} | bgMode:${p.backgroundMode} | rhythm:${p.sectionRhythm} | cta:${p.ctaStyle} | sections:${p.preferredSections.join("→")}`,
     )
     .join("\n");
 }

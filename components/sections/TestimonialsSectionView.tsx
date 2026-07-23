@@ -85,6 +85,36 @@ export function TestimonialsSectionView({ section, theme }: Props) {
         </div>
       )}
 
+      {/* ── Editorial layout (magazine excerpt style) ── */}
+      {layout === "editorial" && (
+        <div className="space-y-5">
+          {items.slice(0, 4).map((item, i) => (
+            <blockquote
+              key={item.name}
+              className="mx-auto max-w-3xl rounded-2xl border border-stone-300 bg-white p-7 shadow-sm sm:p-10"
+              style={{
+                transform: `rotate(${(i % 2 === 0 ? 0.5 : -0.5)}deg)`,
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <span className="shrink-0 text-5xl leading-none text-stone-200">&ldquo;</span>
+                <div>
+                  <p className="text-base leading-relaxed text-slate-700 sm:text-lg">
+                    {item.content}
+                  </p>
+                  <footer className="mt-5 border-t border-stone-100 pt-4">
+                    <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                    {item.role ? (
+                      <p className="text-xs text-stone-500">{item.role}</p>
+                    ) : null}
+                  </footer>
+                </div>
+              </div>
+            </blockquote>
+          ))}
+        </div>
+      )}
+
       {/* ── Avatars layout (compact, centered) ── */}
       {layout === "avatars" && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

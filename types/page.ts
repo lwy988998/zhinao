@@ -13,11 +13,13 @@ export type ContactActionType = "wechat" | "phone" | "form" | "link" | "email";
 
 // ── Layout variants ──
 
-export type HeroLayout = "center" | "split" | "visual";
-export type FeaturesLayout = "grid" | "cards" | "list";
-export type TestimonialsLayout = "cards" | "quote" | "avatars";
-export type CTALayout = "banner" | "panel";
+export type HeroLayout = "center" | "split" | "visual" | "manifesto" | "collage" | "immersive";
+export type FeaturesLayout = "grid" | "cards" | "list" | "numbered" | "collage" | "masonry";
+export type TestimonialsLayout = "cards" | "quote" | "avatars" | "editorial";
+export type CTALayout = "banner" | "panel" | "dark" | "minimal";
 export type PricingLayout = "cards" | "table";
+
+export type BackgroundMode = "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
 
 // ── Shared design hint ──
 
@@ -83,6 +85,7 @@ export interface HeroSection extends BaseSection {
   // Layout & visual enrichments
   layout?: HeroLayout;
   badge?: string;
+  kicker?: string; // small label above title, e.g. "ISSUE 01"
   stats?: Array<{ label: string; value: string }>;
   visualHint?: string; // e.g. "geometric shapes", "soft gradient", "photo left"
 }
@@ -191,4 +194,6 @@ export interface PageContent {
   updatedAt?: string;
   /** Selected layout preset id — drives renderer defaults for hero bg, card style, rhythm */
   layoutPreset?: string;
+  /** Background mode — visual background style for the entire page */
+  backgroundMode?: "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
 }

@@ -13,6 +13,113 @@ export function FeaturesSectionView({ section, theme }: Props) {
   const layout = section.layout ?? "grid";
   const highlightIdx = section.highlightIndex;
 
+  // ── Numbered layout (01 / 02 / 03 — for manifesto/editorial) ──
+  if (layout === "numbered") {
+    return (
+      <SectionShell bg="bg-transparent">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            {section.title}
+          </h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-white/60">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        <div className="space-y-8">
+          {items.map((item, i) => (
+            <div key={item.title} className="flex flex-col gap-3 border-b border-white/10 pb-6 last:border-0 sm:flex-row sm:gap-6">
+              <span className="shrink-0 text-4xl font-black tracking-tight text-white/15 sm:text-5xl">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/60">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Collage layout (misaligned, rotated cards) ──
+  if (layout === "collage") {
+    return (
+      <SectionShell bg="bg-transparent">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            {section.title}
+          </h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap justify-center gap-6 px-4">
+          {items.map((item, i) => {
+            const rotate = (i % 3 === 0 ? -1.5 : i % 3 === 1 ? 0.8 : -0.3);
+            const translateY = i % 2 === 0 ? 0 : 8;
+            return (
+              <article
+                key={item.title}
+                className="w-60 rounded-2xl border border-stone-300 bg-white p-5 shadow-md transition-shadow hover:shadow-xl"
+                style={{
+                  transform: `rotate(${rotate}deg) translateY(${translateY}px)`,
+                }}
+              >
+                <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-2 text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{item.description}</p>
+              </article>
+            );
+          })}
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Masonry layout ──
+  if (layout === "masonry") {
+    return (
+      <SectionShell bg="bg-white">
+        <div className="mb-10 space-y-3 text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            {section.title}
+          </h2>
+          {subtitle ? (
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
+          {items.map((item, i) => {
+            const isHighlight = highlightIdx === i;
+            return (
+              <article
+                key={item.title}
+                className={`mb-5 break-inside-avoid rounded-2xl border p-5 transition-shadow ${
+                  isHighlight
+                    ? "border-slate-300 bg-white shadow-lg"
+                    : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
+                }`}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>
+              </article>
+            );
+          })}
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Rest of layouts below ──
   const inner = (
     <>
       {/* Section header */}

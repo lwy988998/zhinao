@@ -10,6 +10,50 @@ type Props = {
 export function CTASectionView({ section, theme }: Props) {
   const layout = section.layout ?? "banner";
 
+  // ── Dark layout (for manifesto / dynamic visual) ──
+  if (layout === "dark") {
+    return (
+      <SectionShell bg="bg-transparent">
+        <div className="flex flex-col items-center text-center py-6 sm:py-12">
+          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            {section.title}
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/60">
+            {section.description}
+          </p>
+          <button
+            type="button"
+            className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100"
+          >
+            {section.buttonText}
+          </button>
+        </div>
+      </SectionShell>
+    );
+  }
+
+  // ── Minimal layout (clean, no heavy bg) ──
+  if (layout === "minimal") {
+    return (
+      <SectionShell bg="bg-transparent">
+        <div className="flex flex-col items-center text-center py-6 sm:py-12">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+            {section.title}
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
+            {section.description}
+          </p>
+          <button
+            type="button"
+            className={`mt-6 inline-flex h-11 items-center justify-center rounded-full px-7 text-sm font-medium transition-all active:scale-[0.97] ${theme.button} ${theme.buttonHover}`}
+          >
+            {section.buttonText}
+          </button>
+        </div>
+      </SectionShell>
+    );
+  }
+
   // ── Banner layout (full-width, solid color bar) ──
   if (layout === "banner" || !layout) {
     return (
