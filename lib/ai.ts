@@ -18,7 +18,91 @@ type ChatCompletionResponse = {
   }>;
 };
 
+type ProviderConfig = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  label: string;
+};
+
 const DEFAULT_MODEL = "gpt-4o-mini";
+
+function buildProviderConfig(
+  keyEnv: string,
+  urlEnv: string,
+  modelEnv: string,
+  label: string,
+): ProviderConfig | null {
+  const apiKey = process.env[keyEnv]?.trim();
+  const baseUrl = process.env[urlEnv]?.trim();
+  const model = process.env[modelEnv]?.trim() || DEFAULT_MODEL;
+
+  if (!apiKey || !baseUrl) return null;
+
+  return { apiKey, baseUrl, model, label };
+}
+
+async function callAIProvider(
+  config: ProviderConfig,
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<ChatCompletionResponse> {
+  const endpoint = `${config.baseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  console.log(`[ai debug] provider=${config.label} endpoint=${new URL(endpoint).pathname}`);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 4096,
+    }),
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  console.log(`[ai debug] provider=${config.label} status=${response.status} content-type=${contentType}`);
+
+  if (!response.ok) {
+    // Non-JSON response body for diagnostics
+    if (!contentType.includes("application/json")) {
+      const textSample = await response.text().catch(() => "");
+      console.log(`[ai debug] provider=${config.label} html=${textSample.trimStart().startsWith("<")} preview=${textSample.slice(0, 100)}`);
+      throw new Error(`AI 上游返回了 HTML/非 JSON 响应（${response.status}），请检查 AI_BASE_URL 是否正确`);
+    }
+
+    // Try reading JSON error from upstream
+    let upstreamError = "";
+    try {
+      const errBody = await response.json();
+      upstreamError = (errBody as Record<string, unknown>)?.error
+        ? (typeof (errBody as Record<string, unknown>).error === "object"
+          ? ((errBody as Record<string, unknown>).error as Record<string, string>).message ?? ""
+          : String((errBody as Record<string, unknown>).error ?? ""))
+        : "";
+    } catch { /* ignore */ }
+
+    console.log(`[ai debug] provider=${config.label} upstream_error=${upstreamError}`);
+    throw new Error(`AI API 请求失败：${response.status}${upstreamError ? ` — ${upstreamError}` : ""}`);
+  }
+
+  // Guard: don't parse non-JSON as JSON
+  if (!contentType.includes("application/json")) {
+    const textSample = await response.text().catch(() => "");
+    console.log(`[ai debug] provider=${config.label} html=${textSample.trimStart().startsWith("<")} preview=${textSample.slice(0, 100)}`);
+    throw new Error("AI 上游不是 JSON 响应，请检查接口地址和服务商兼容性");
+  }
+
+  return (await response.json()) as ChatCompletionResponse;
+}
 
 const systemPrompt = `你是“智脑 / zhinao”的网页内容生成引擎。
 你只能返回 JSON，不返回 Markdown，不返回解释，不返回代码块。
@@ -34,7 +118,7 @@ PageContent 字段必须包含：
 - sections: PageSection[]
 
 sections 规则：
-- 数量必须为 6 到 9 个。
+- 数量必须为 6 到 10 个。
 - 第一个模块必须是 hero。
 - 最后一个模块必须是 cta。
 - contact 模块必须存在。
@@ -101,77 +185,65 @@ export async function generatePageContent(params: GeneratePageContentParams): Pr
     return normalizePageContent(mockPageContent);
   }
 
-  const apiKey = process.env.AI_API_KEY?.trim();
-  const baseUrl = process.env.AI_BASE_URL?.trim();
-  const model = process.env.AI_MODEL?.trim() || DEFAULT_MODEL;
+  const providers: ProviderConfig[] = [];
 
-  if (!apiKey || !baseUrl) {
+  // 主 API
+  const primary = buildProviderConfig("AI_API_KEY", "AI_BASE_URL", "AI_MODEL", "primary");
+  if (primary) providers.push(primary);
+
+  // 备 API（DeepSeek 等）
+  const fallback = buildProviderConfig("AI_API_KEY_FALLBACK", "AI_BASE_URL_FALLBACK", "AI_MODEL_FALLBACK", "fallback");
+  if (fallback) providers.push(fallback);
+
+  if (providers.length === 0) {
     throw new Error("AI API 未配置");
   }
 
-  const endpoint = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+  const userPrompt = buildUserPrompt(params);
+  let lastError: Error | null = null;
 
-  // 安全日志：只输出非敏感诊断信息
-  console.log("[ai debug] baseUrlEndsWithV1:", baseUrl.endsWith("/v1") || baseUrl.endsWith("/v1/"));
-  console.log("[ai debug] endpoint path:", new URL(endpoint).pathname);
+  for (const provider of providers) {
+    try {
+      console.log(`[ai debug] trying provider=${provider.label}`);
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: buildUserPrompt(params) },
-      ],
-      temperature: 0.7,
-      max_tokens: 4096,
-    }),
-  });
+      const result = await callAIProvider(provider, systemPrompt, userPrompt);
+      const content = result.choices?.[0]?.message?.content;
 
-  const contentType = response.headers.get("content-type") || "";
-  console.log("[ai debug] responseStatus:", response.status, "contentType:", contentType);
+      if (!content) {
+        lastError = new Error(`[${provider.label}] AI 返回内容为空`);
+        console.log(`[ai debug] provider=${provider.label} empty content, trying next...`);
+        continue;
+      }
 
-  if (!response.ok) {
-    // 尝试读取非 JSON 响应体用于诊断
-    if (!contentType.includes("application/json")) {
-      const textSample = await response.text().catch(() => "");
-      console.log("[ai debug] responseTextStartsWithHtml:", textSample.trimStart().startsWith("<"));
-      console.log("[ai debug] responseTextFirst100:", textSample.slice(0, 100));
-      throw new Error(`AI 上游返回了 HTML/非 JSON 响应（${response.status}），请检查 AI_BASE_URL 是否正确`);
+      let parsed: unknown;
+
+      try {
+        parsed = JSON.parse(extractJSON(content));
+      } catch {
+        lastError = new Error(`[${provider.label}] AI 返回内容不是有效 JSON`);
+        console.log(`[ai debug] provider=${provider.label} invalid JSON, trying next...`);
+        continue;
+      }
+
+      if (!isValidPageContent(parsed)) {
+        const keys = typeof parsed === "object" && parsed !== null ? Object.keys(parsed as Record<string, unknown>).join(", ") : typeof parsed;
+        console.log(`[ai debug] provider=${provider.label} invalid structure. top-level keys: ${keys}`);
+        lastError = new Error(`[${provider.label}] AI 返回内容不符合 PageContent 结构`);
+        console.log(`[ai debug] provider=${provider.label} invalid structure, trying next...`);
+        continue;
+      }
+
+      console.log(`[ai debug] provider=${provider.label} success`);
+      return normalizePageContent(parsed);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.log(`[ai debug] provider=${provider.label} failed: ${lastError.message}`);
+      // Continue to next provider
     }
-    throw new Error(`AI API 请求失败：${response.status}`);
   }
 
-  // 保护：非 JSON 响应不调用 .json()
-  if (!contentType.includes("application/json")) {
-    const textSample = await response.text().catch(() => "");
-    console.log("[ai debug] responseTextStartsWithHtml:", textSample.trimStart().startsWith("<"));
-    console.log("[ai debug] responseTextFirst100:", textSample.slice(0, 100));
-    throw new Error("AI 上游不是 JSON 响应，请检查接口地址和服务商兼容性");
-  }
-
-  const result = (await response.json()) as ChatCompletionResponse;
-  const content = result.choices?.[0]?.message?.content;
-
-  if (!content) {
-    throw new Error("AI 返回内容为空");
-  }
-
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(extractJSON(content));
-  } catch {
-    throw new Error("AI 返回内容不是有效 JSON");
-  }
-
-  if (!isValidPageContent(parsed)) {
-    throw new Error("AI 返回内容不符合 PageContent 结构");
-  }
-
-  return normalizePageContent(parsed);
+  // All providers failed
+  const summary = lastError?.message ?? "未知错误";
+  console.log(`[ai debug] all providers failed. last error: ${summary}`);
+  throw new Error(summary);
 }

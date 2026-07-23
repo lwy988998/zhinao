@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     console.error("/api/generate", message);
 
     // 透传安全诊断错误，其他错误归为通用提示
-    const safeMessages = ["AI API 未配置", "AI 上游"];
+    const safeMessages = ["AI API 未配置", "AI 上游", "[primary]", "[fallback]"];
     const clientMessage = safeMessages.some((prefix) => message.startsWith(prefix))
       ? message
       : "AI 生成失败，请稍后重试";

@@ -101,7 +101,7 @@ export function isValidPageContent(input: unknown): input is PageContent {
     isNonEmptyString(contactAction.value) &&
     Array.isArray(sections) &&
     sections.length >= 6 &&
-    sections.length <= 9 &&
+    sections.length <= 10 &&
     sections.every(isSection) &&
     sections[0]?.type === "hero" &&
     sections.some((section) => section.type === "contact") &&
