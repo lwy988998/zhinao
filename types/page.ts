@@ -189,4 +189,6 @@ export interface PageContent {
   sections: PageSection[];
   createdAt?: string;
   updatedAt?: string;
+  /** Selected layout preset id — drives renderer defaults for hero bg, card style, rhythm */
+  layoutPreset?: string;
 }
