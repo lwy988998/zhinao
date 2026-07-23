@@ -201,7 +201,9 @@ ${presetsForPrompt()}
 ▸ hero { type: "hero", title, subtitle, buttonText, buttonAction, image?, secondaryButtonText?,
         layout?: "center" | "split" | "visual" | "manifesto" | "collage" | "immersive",
         badge?: string, kicker?: string,
-        stats?: [{ label, value }], visualHint?: string }
+        stats?: [{ label, value }], visualHint?: string,
+        mediaType?: "none" | "image" | "abstract" | "canvas",
+        mediaPrompt?: string, mediaPosition?: "left" | "right" | "background" | "center" }
 ▸ features { type: "features", title, subtitle?, items: [{ title, description, icon? }],
            layout?: "grid" | "cards" | "list" | "numbered" | "collage" | "masonry",
            highlightIndex?: number }
@@ -234,8 +236,12 @@ ${presetsForPrompt()}
 5. features 用 preset 指定的 layout (numbered/collage/masonry)
 6. 至少一个 pricing/testimonials 设了 highlighted/featuredPlanIndex
 7. 不同 pageType 的模块顺序有明显差异
-8. 文案每句话都具体,符合 preset 行业语境
-9. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
+8. 如果页面适合图片: 设置 hero.mediaType="image"、hero.mediaPrompt、hero.mediaPosition
+   - manifesto_dark: mediaPosition="right" 或 "background"
+   - editorial_collage: mediaPosition="right"
+   - dynamic_visual: mediaPosition="background"
+9. 文案每句话都具体,符合 preset 行业语境
+10. 输出纯 JSON,无装饰、无反引号、无代码块标记`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();

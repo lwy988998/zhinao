@@ -88,6 +88,12 @@ export interface HeroSection extends BaseSection {
   kicker?: string; // small label above title, e.g. "ISSUE 01"
   stats?: Array<{ label: string; value: string }>;
   visualHint?: string; // e.g. "geometric shapes", "soft gradient", "photo left"
+  // Image/media support
+  mediaType?: "none" | "image" | "abstract" | "canvas";
+  mediaUrl?: string;
+  mediaPrompt?: string;
+  mediaPosition?: "left" | "right" | "background" | "center";
+  mediaFit?: "cover" | "contain";
 }
 
 export interface FeaturesSection extends BaseSection {
@@ -98,6 +104,7 @@ export interface FeaturesSection extends BaseSection {
   items: Array<{ title: string; description: string; icon?: string }>;
   layout?: FeaturesLayout;
   highlightIndex?: number; // 0-based — which card to emphasise
+  itemImageUrls?: string[];
 }
 
 export interface PainPointsSection extends BaseSection {
@@ -137,6 +144,7 @@ export interface TestimonialsSection extends BaseSection {
   description?: string;
   items: Array<{ name: string; role?: string; content: string; avatar?: string }>;
   layout?: TestimonialsLayout;
+  avatarUrls?: string[];
 }
 
 export interface FAQSection extends BaseSection {
@@ -165,6 +173,7 @@ export interface CTASection extends BaseSection {
   buttonText: string;
   buttonAction: string;
   layout?: CTALayout;
+  backgroundImageUrl?: string;
 }
 
 // ── Union ──
@@ -196,4 +205,10 @@ export interface PageContent {
   layoutPreset?: string;
   /** Background mode — visual background style for the entire page */
   backgroundMode?: "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
+  /** AI-generated visual assets */
+  assets?: {
+    heroImageUrl?: string;
+    collageImageUrls?: string[];
+    coverImageUrl?: string;
+  };
 }

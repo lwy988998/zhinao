@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePageContent } from "@/lib/ai";
+import { enrichPageWithImages } from "@/lib/image";
 import type { ContactActionType, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GenerateParams = {
@@ -82,7 +83,10 @@ export async function POST(request: NextRequest) {
   try {
     const data = await generatePageContent(validation.data);
 
-    return NextResponse.json({ success: true, data });
+    // Enrich with AI-generated images (fast-fail: 25s per image, skips on error)
+    const enriched = await enrichPageWithImages(data);
+
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     const message = error instanceof Error ? error.message : "未知错误";
     console.error("/api/generate", message);

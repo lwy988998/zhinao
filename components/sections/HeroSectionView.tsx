@@ -146,9 +146,18 @@ export function HeroSectionView({ section, theme }: Props) {
 
           {/* Right: visual */}
           <div className="flex flex-1 items-center justify-center">
-            <div className="flex h-64 w-full max-w-md items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-sm text-slate-400 sm:h-80">
-              {section.visualHint ?? "视觉区域"}
-            </div>
+            {section.mediaUrl ? (
+              <img
+                src={section.mediaUrl}
+                alt=""
+                className="h-64 w-full max-w-md rounded-2xl object-cover shadow-lg sm:h-80"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-64 w-full max-w-md items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-sm text-slate-400 sm:h-80">
+                {section.visualHint ?? "视觉区域"}
+              </div>
+            )}
           </div>
         </div>
       </SectionShell>
@@ -276,12 +285,11 @@ export function HeroSectionView({ section, theme }: Props) {
 
           {/* Right: layered paper cards */}
           <div className="relative flex flex-1 items-center justify-center">
-            {/* Paper stack effect */}
             <div className="relative h-64 w-56 sm:h-80 sm:w-64">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="absolute inset-0 rounded-2xl border border-stone-300 bg-white shadow-lg"
+                  className="absolute inset-0 overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-lg"
                   style={{
                     transform: `rotate(${(i - 1) * 3}deg) translateY(${i * 4}px) translateX(${i * 6}px)`,
                     zIndex: 3 - i,
@@ -290,22 +298,31 @@ export function HeroSectionView({ section, theme }: Props) {
                   <div className="flex h-full items-center justify-center p-4">
                     <div className="text-center text-stone-300">
                       <div className="mx-auto mb-2 h-24 w-20 rounded-lg bg-stone-100" />
-                      <div className="h-2 w-16 rounded bg-stone-100 mx-auto" />
+                      <div className="mx-auto h-2 w-16 rounded bg-stone-100" />
                     </div>
                   </div>
                 </div>
               ))}
-              {/* Top card — the hero visual */}
+              {/* Top card — hero visual or media image */}
               <div
-                className="absolute inset-0 flex items-center justify-center rounded-2xl border border-stone-300 bg-white shadow-xl"
+                className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl border border-stone-300 bg-white shadow-xl"
                 style={{ zIndex: 4 }}
               >
-                <div className="text-center text-stone-400">
-                  <div className="mx-auto mb-2 flex h-24 w-20 items-center justify-center rounded-lg bg-stone-50 text-3xl">
-                    ✦
+                {section.mediaUrl ? (
+                  <img
+                    src={section.mediaUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="text-center text-stone-400">
+                    <div className="mx-auto mb-2 flex h-24 w-20 items-center justify-center rounded-lg bg-stone-50 text-3xl">
+                      ✦
+                    </div>
+                    <p className="text-xs">{section.visualHint ?? "作品集"}</p>
                   </div>
-                  <p className="text-xs">{section.visualHint ?? "作品集"}</p>
-                </div>
+                )}
               </div>
             </div>
           </div>
