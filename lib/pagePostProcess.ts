@@ -155,7 +155,7 @@ function enrichFAQ(content: PageContent): PageContent {
 function enrichVisual(content: PageContent): PageContent {
   if (!content.visualMode) return content;
 
-  let enriched = { ...content };
+  const enriched = { ...content };
 
   // Ensure backgroundMode is set to a visual-rich option
   if (!enriched.backgroundMode || enriched.backgroundMode === "plain") {

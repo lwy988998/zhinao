@@ -348,7 +348,10 @@ ${presetsForPrompt()}
 14. 输出纯 JSON,无装饰、无反引号、无代码块标记
 15. 所有interactionType不为"none"的section，必须附带完整交互内容
 16. 每个交互后的状态都像一个完整的内容面板
-17. 如果 visualMode=1，必须选择高级视觉预设，hero 必须有 mediaType/image/visualHint`;
+17. 如果 visualMode=1，必须选择高级视觉预设，hero 必须有 mediaType="image"，mediaPrompt 提供中文图片描述（抽象视觉，不涉及具体品牌/人物），mediaPosition 设为 "right" 或 "background"
+18. editorial_collage 预设下 gallery section 必须优先生成，且每个 item 带 imageUrl 字段（留空字符串即可，由系统后处理生成）
+19. dynamic_visual 预设下的 hero 应使用 layout="immersive" 强化科技感
+20. manifesto_dark 预设下的 hero 应使用 layout="manifesto"，带 kicker 和 badge`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();

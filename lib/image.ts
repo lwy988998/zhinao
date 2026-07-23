@@ -152,7 +152,6 @@ export async function generateHeroImage(content: PageContent): Promise<string | 
   const heroSection = content.sections.find((s) => s.type === "hero");
   if (!heroSection) return null;
 
-  // Only generate for presets that benefit from images
   const preset = content.layoutPreset ?? "";
   const presetsNeedingImages = ["manifesto_dark", "editorial_collage", "dynamic_visual"];
 
@@ -163,9 +162,16 @@ export async function generateHeroImage(content: PageContent): Promise<string | 
     return result?.url ?? null;
   }
 
-  // For standard presets, only generate if user input suggests visual content
-  const userInputLower = content.pageDescription.toLowerCase();
-  const visualKeywords = ["图片", "照片", "作品", "视觉", "展示", "相册", "画廊", "设计", "摄影"];
+  // For visualMode=1, always try to generate regardless of preset
+  if (content.visualMode) {
+    const prompt = buildHeroImagePrompt(content);
+    const result = await generateImage(prompt);
+    return result?.url ?? null;
+  }
+
+  // For standard presets without visualMode, only generate if user input suggests visual content
+  const userInputLower = (content.pageDescription + content.pageTitle).toLowerCase();
+  const visualKeywords = ["图片", "照片", "作品", "视觉", "展示", "相册", "画廊", "设计", "摄影", "作品集"];
   if (visualKeywords.some((kw) => userInputLower.includes(kw))) {
     const prompt = buildHeroImagePrompt(content);
     const result = await generateImage(prompt);

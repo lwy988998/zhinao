@@ -141,9 +141,18 @@ export function HeroSectionView({ section, theme }: Props) {
 
           {!interactionType.startsWith("interactive") && section.visualHint ? (
             <div className="mt-12 w-full max-w-3xl">
-              <div className="mx-auto flex h-48 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-sm text-slate-400 sm:h-64">
-                {section.visualHint}
-              </div>
+              {section.mediaUrl ? (
+                <img
+                  src={section.mediaUrl}
+                  alt=""
+                  className="mx-auto h-48 w-full rounded-2xl object-cover shadow-lg sm:h-64"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="mx-auto flex h-48 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-sm text-slate-400 sm:h-64">
+                  {section.visualHint}
+                </div>
+              )}
             </div>
           ) : null}
         </div>
@@ -215,7 +224,18 @@ export function HeroSectionView({ section, theme }: Props) {
   if (layout === "manifesto") {
     return (
       <SectionShell bg="bg-transparent" spacing="airy" divider={false}>
-        <div className="flex flex-col items-center text-center py-8 sm:py-16">
+        <div className="relative flex flex-col items-center text-center py-8 sm:py-16">
+          {section.mediaUrl ? (
+            <div className="absolute inset-0 -z-10 overflow-hidden rounded-2xl opacity-30">
+              <img
+                src={section.mediaUrl}
+                alt=""
+                className="h-full w-full object-cover blur-sm"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-slate-950/70" />
+            </div>
+          ) : null}
           {section.kicker ? (
             <p className="mb-3 text-xs font-medium uppercase tracking-[0.25em] text-white/50">{section.kicker}</p>
           ) : null}
@@ -435,7 +455,16 @@ export function HeroSectionView({ section, theme }: Props) {
             </div>
           </div>
         ) : null}
-        {section.visualHint ? (
+        {section.mediaUrl ? (
+          <div className="mt-10 w-full max-w-4xl">
+            <img
+              src={section.mediaUrl}
+              alt=""
+              className="mx-auto h-56 w-full rounded-2xl object-cover shadow-lg sm:h-72"
+              loading="lazy"
+            />
+          </div>
+        ) : section.visualHint ? (
           <div className="mt-10 w-full max-w-4xl">
             <div className="mx-auto flex h-48 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 text-sm text-slate-400 sm:h-64">
               {section.visualHint}
