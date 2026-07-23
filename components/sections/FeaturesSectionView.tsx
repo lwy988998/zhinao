@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { FeaturesSection } from "@/types/page";
 import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "./SectionShell";
@@ -12,6 +15,123 @@ type Props = {
   section: FeaturesSection;
   theme: ThemeClasses;
 };
+
+type FeatureItem = {
+  title: string;
+  description: string;
+  icon?: string;
+};
+
+function FeatureDetailModal({ item, onClose }: { item: FeatureItem; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-4 pb-4 pt-16 backdrop-blur-sm sm:items-center sm:p-6">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="关闭" onClick={onClose} />
+      <div className="relative w-full max-w-md max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="text-xl font-bold text-slate-950">{item.icon ? `${item.icon} ` : ""}{item.title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <p className="mt-4 text-base leading-relaxed text-slate-600">{item.description}</p>
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-full items-center justify-center rounded-full bg-slate-950 text-sm font-medium text-white transition active:scale-95 hover:bg-slate-800"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({
+  item,
+  isHighlight,
+  theme,
+}: {
+  item: FeatureItem;
+  isHighlight: boolean;
+  theme: ThemeClasses;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <article
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
+        tabIndex={0}
+        role="button"
+        aria-label={`查看 ${item.title} 详情`}
+        className={`group cursor-pointer rounded-2xl border p-6 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+          isHighlight
+            ? `border-slate-300 bg-white shadow-lg ${theme.ring}`
+            : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
+        }`}
+      >
+        {item.icon ? (
+          <div className="mb-3 text-2xl">{item.icon}</div>
+        ) : isHighlight ? (
+          <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${theme.softBg}`}>
+            <div className={`h-2 w-2 rounded-full ${theme.bg}`} />
+          </div>
+        ) : null}
+        <h3 className={`text-lg font-semibold ${isHighlight ? theme.text : "text-slate-900"}`}>{item.title}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>
+      </article>
+      {open ? <FeatureDetailModal item={item} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
+function FeatureCardRow({
+  item,
+  isHighlight,
+  index,
+  theme,
+}: {
+  item: FeatureItem;
+  isHighlight: boolean;
+  index: number;
+  theme: ThemeClasses;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <article
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
+        tabIndex={0}
+        role="button"
+        aria-label={`查看 ${item.title} 详情`}
+        className={`group cursor-pointer flex flex-col gap-5 rounded-2xl border p-6 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:flex-row sm:items-center ${
+          isHighlight
+            ? `border-slate-300 bg-white shadow-lg ${theme.ring}`
+            : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
+        }`}
+      >
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isHighlight ? `${theme.bg} text-white` : theme.softBg}`}>
+          <span className="text-lg font-semibold">{index + 1}</span>
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{item.description}</p>
+        </div>
+      </article>
+      {open ? <FeatureDetailModal item={item} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
 
 export function FeaturesSectionView({ section, theme }: Props) {
   const items = section.items ?? [];
@@ -258,24 +378,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
           {items.map((item, i) => {
             const isHighlight = highlightIdx === i;
             return (
-              <article
-                key={item.title}
-                className={`group rounded-2xl border p-6 transition-shadow ${
-                  isHighlight
-                    ? `border-slate-300 bg-white shadow-lg ${theme.ring}`
-                    : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
-                }`}
-              >
-                {item.icon ? (
-                  <div className="mb-3 text-2xl">{item.icon}</div>
-                ) : isHighlight ? (
-                  <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${theme.softBg}`}>
-                    <div className={`h-2 w-2 rounded-full ${theme.bg}`} />
-                  </div>
-                ) : null}
-                <h3 className={`text-lg font-semibold ${isHighlight ? theme.text : "text-slate-900"}`}>{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>
-              </article>
+              <FeatureCard key={item.title} item={item} isHighlight={isHighlight} theme={theme} />
             );
           })}
         </div>
@@ -287,22 +390,7 @@ export function FeaturesSectionView({ section, theme }: Props) {
           {items.map((item, i) => {
             const isHighlight = highlightIdx === i;
             return (
-              <article
-                key={item.title}
-                className={`group flex flex-col gap-5 rounded-2xl border p-6 transition-shadow sm:flex-row sm:items-center ${
-                  isHighlight
-                    ? `border-slate-300 bg-white shadow-lg ${theme.ring}`
-                    : "border-slate-200/60 bg-white shadow-sm hover:shadow-md"
-                }`}
-              >
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isHighlight ? `${theme.bg} text-white` : theme.softBg}`}>
-                  <span className="text-lg font-semibold">{i + 1}</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">{item.description}</p>
-                </div>
-              </article>
+              <FeatureCardRow key={item.title} item={item} isHighlight={isHighlight} index={i} theme={theme} />
             );
           })}
         </div>

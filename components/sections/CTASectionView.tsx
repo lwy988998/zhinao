@@ -4,24 +4,31 @@ import type { CTASection } from "@/types/page";
 import type { ThemeClasses } from "@/lib/theme";
 import { SectionShell } from "./SectionShell";
 import { InteractiveModal } from "@/components/interactive/InteractiveModal";
+import { scrollToContact, copyText, isExternalUrl, openLink } from "@/lib/actionUtils";
 
 type Props = {
   section: CTASection;
   theme: ThemeClasses;
 };
 
-/**
- * Scroll to the #section-contact or #section-cta target when a CTA button
- * is clicked on a public/rendered page.
- */
-function scrollToAction() {
-  const contactEl =
-    document.getElementById("section-contact") ??
-    document.getElementById("section-cta") ??
-    document.querySelector("footer");
-  if (contactEl) {
-    contactEl.scrollIntoView({ behavior: "smooth" });
+/** Resolve what a CTA button should do */
+function handleCTAAction(section: CTASection) {
+  const val = section.buttonAction;
+
+  // If it's an external URL, open it
+  if (val && isExternalUrl(val)) {
+    openLink(val);
+    return;
   }
+
+  // If it's meaningful text, copy it
+  if (val && val.length > 3 && !val.startsWith("#")) {
+    copyText(val, section.buttonText);
+    return;
+  }
+
+  // Default: scroll to contact
+  scrollToContact();
 }
 
 export function CTASectionView({ section, theme }: Props) {
@@ -53,7 +60,7 @@ export function CTASectionView({ section, theme }: Props) {
     }
 
     return (
-      <button type="button" onClick={scrollToAction} className={className}>
+      <button type="button" onClick={() => handleCTAAction(section)} className={className}>
         {section.buttonText}
       </button>
     );

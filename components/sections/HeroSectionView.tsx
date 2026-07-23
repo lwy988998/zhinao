@@ -6,6 +6,7 @@ import type { ThemeClasses } from "@/lib/theme";
 import { InteractiveCarousel } from "@/components/interactive/InteractiveCarousel";
 import type { CarouselSlideData } from "@/components/interactive/InteractiveCarousel";
 import { InteractiveModal } from "@/components/interactive/InteractiveModal";
+import { scrollToContact, copyText, isExternalUrl, openLink } from "@/lib/actionUtils";
 
 type Props = {
   section: HeroSection;
@@ -34,9 +35,20 @@ function StatsBlock({
   );
 }
 
-function scrollToAction() {
-  const el = document.getElementById("section-contact") ?? document.getElementById("section-cta") ?? document.querySelector("footer");
-  if (el) el.scrollIntoView({ behavior: "smooth" });
+function handleButtonAction(section: HeroSection, fallback: string) {
+  const val = section.buttonAction || fallback;
+
+  if (val && isExternalUrl(val)) {
+    openLink(val);
+    return;
+  }
+
+  if (val && val.length > 3 && !val.startsWith("#")) {
+    copyText(val, section.buttonText || section.primaryButtonText);
+    return;
+  }
+
+  scrollToContact();
 }
 
 export function HeroSectionView({ section, theme }: Props) {
@@ -64,7 +76,7 @@ export function HeroSectionView({ section, theme }: Props) {
     return (
       <button
         type="button"
-        onClick={scrollToAction}
+        onClick={() => handleButtonAction(section, section.buttonAction)}
         className="inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium transition-all active:scale-[0.97] bg-slate-950 text-white shadow-sm hover:shadow-md hover:bg-slate-800 cursor-pointer"
       >
         {primaryText}
@@ -129,7 +141,7 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
               >
                 {section.secondaryButtonText}
@@ -196,7 +208,7 @@ export function HeroSectionView({ section, theme }: Props) {
               {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
               >
                 {section.secondaryButtonText}
@@ -271,7 +283,7 @@ export function HeroSectionView({ section, theme }: Props) {
             ) : (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-slate-100 cursor-pointer"
               >
                 {primaryText}
@@ -280,7 +292,7 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40 hover:bg-white/5 cursor-pointer"
               >
                 {section.secondaryButtonText}
@@ -321,7 +333,7 @@ export function HeroSectionView({ section, theme }: Props) {
               {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border border-slate-300 px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:bg-slate-50 cursor-pointer"
               >
                 {section.secondaryButtonText}
@@ -404,7 +416,7 @@ export function HeroSectionView({ section, theme }: Props) {
             ) : (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-slate-950 transition-all active:scale-[0.97] hover:bg-white/90 cursor-pointer"
               >
                 {primaryText}
@@ -413,7 +425,7 @@ export function HeroSectionView({ section, theme }: Props) {
             {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-[0.97] hover:border-white/40 cursor-pointer"
               >
                 {section.secondaryButtonText}
@@ -441,7 +453,7 @@ export function HeroSectionView({ section, theme }: Props) {
           {section.secondaryButtonText ? (
               <button
                 type="button"
-                onClick={scrollToAction}
+                onClick={() => handleButtonAction(section, section.buttonAction)}
                 className="inline-flex h-12 items-center justify-center rounded-full border px-8 text-sm font-medium text-slate-700 transition-all active:scale-[0.97] hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
               >
                 {section.secondaryButtonText}
