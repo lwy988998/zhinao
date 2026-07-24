@@ -1,5 +1,5 @@
 import { createFallbackPageContent, type StableGenerateParams } from "@/lib/generateFallback";
-import { getTemplateById } from "@/lib/templates";
+import { getTemplateById, type TemplatePreset } from "@/lib/templates";
 import type {
   PageContent,
   AppPreviewSection,
@@ -312,6 +312,67 @@ function normalizeKnownSection(section: unknown, index: number, fallback: PageSe
   return null;
 }
 
+export function applyTemplateFramework(content: PageContent, template: TemplatePreset | null, params: StableGenerateParams): PageContent {
+  if (!template) return content;
+  const fallback = createFallbackPageContent(params, "template_fallback");
+  const forbidden = new Set(template.forbiddenSections ?? []);
+  const sections = content.sections.filter((section) => !forbidden.has(section.type));
+  const existingTypes = new Set<string>(sections.map((section) => section.type));
+
+  for (const requiredType of template.requiredSections) {
+    if (existingTypes.has(requiredType)) continue;
+    const fallbackSection = fallback.sections.find((section) => section.type === requiredType) ?? template.previewData.sections.find((section) => section.type === requiredType);
+    if (fallbackSection) {
+      sections.push({ ...fallbackSection, id: fallbackSection.id ?? requiredType, visible: fallbackSection.visible ?? true });
+      existingTypes.add(requiredType);
+    }
+  }
+
+  sections.sort((a, b) => {
+    const ai = template.recommendedSections.indexOf(a.type);
+    const bi = template.recommendedSections.indexOf(b.type);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  const correctedSections = sections.map((section) => {
+    if (section.type !== "hero") return section;
+    return {
+      ...section,
+      layout: section.layout ?? template.heroFramework.layout,
+      mediaType: section.mediaType === "image" || section.mediaType === "canvas" ? section.mediaType : "image" as const,
+      mediaPosition: section.mediaPosition ?? (template.heroFramework.layout === "immersive" ? "background" as const : "right" as const),
+      visualHint: section.visualHint ?? template.heroFramework.visualDirection,
+      mediaPrompt: section.mediaPrompt ?? template.heroFramework.mediaStrategy,
+      interactionType: section.interactionType ?? (template.interactionMode === "interactive_demo" ? "tabs" as const : template.interactionMode === "interactive_showcase" ? "carousel" as const : "none" as const),
+    };
+  });
+
+  const hasAppStructure = template.appMode === "dashboard" || template.appMode === "app_preview";
+  const navigation = hasAppStructure
+    ? content.navigation ?? {
+        type: "hybrid" as const,
+        items: correctedSections.slice(0, 6).map((section) => ({
+          id: section.id ?? section.type,
+          label: section.title ?? section.type,
+          targetSectionId: section.id ?? section.type,
+        })),
+      }
+    : content.navigation;
+
+  return {
+    ...content,
+    pageType: template.pageType,
+    layoutPreset: template.layoutPreset,
+    backgroundMode: template.backgroundMode,
+    visualMode: true,
+    interactionMode: template.interactionMode,
+    interactionPreset: content.interactionPreset ?? template.interactionMode,
+    appMode: template.appMode ?? content.appMode,
+    navigation,
+    sections: correctedSections.slice(0, 12),
+  };
+}
+
 export function normalizePageContent(input: unknown, params: StableGenerateParams): PageContent {
   const raw = isRecord(input) ? input : {};
   const fallback = createFallbackPageContent(params, params.templateId ? "template_fallback" : "mock_fallback");
@@ -384,5 +445,5 @@ export function normalizePageContent(input: unknown, params: StableGenerateParam
   };
 
   if (content.seo.keywords.length === 0) content.seo.keywords = fallback.seo.keywords;
-  return enrichInteractiveContent(content);
+  return applyTemplateFramework(enrichInteractiveContent(content), template, params);
 }

@@ -64,7 +64,6 @@ async function callAIProvider(
   userPrompt: string,
 ): Promise<ChatCompletionResponse> {
   const endpoint = `${config.baseUrl.replace(/\/$/, "")}/chat/completions`;
-
   console.log(`[ai debug] provider=${config.label} endpoint=${new URL(endpoint).pathname}`);
 
   const response = await fetch(endpoint, {
@@ -88,14 +87,12 @@ async function callAIProvider(
   console.log(`[ai debug] provider=${config.label} status=${response.status} content-type=${contentType}`);
 
   if (!response.ok) {
-    // Non-JSON response body for diagnostics
     if (!contentType.includes("application/json")) {
       const textSample = await response.text().catch(() => "");
       console.log(`[ai debug] provider=${config.label} html=${textSample.trimStart().startsWith("<")} preview=${textSample.slice(0, 100)}`);
       throw new Error(`AI 上游返回了 HTML/非 JSON 响应(${response.status}),请检查 AI_BASE_URL 是否正确`);
     }
 
-    // Try reading JSON error from upstream
     let upstreamError = "";
     try {
       const errBody = await response.json();
@@ -110,7 +107,6 @@ async function callAIProvider(
     throw new Error(`AI API 请求失败:${response.status}${upstreamError ? ` - ${upstreamError}` : ""}`);
   }
 
-  // Guard: don't parse non-JSON as JSON
   if (!contentType.includes("application/json")) {
     const textSample = await response.text().catch(() => "");
     console.log(`[ai debug] provider=${config.label} html=${textSample.trimStart().startsWith("<")} preview=${textSample.slice(0, 100)}`);
@@ -144,9 +140,12 @@ PageContent 字段:
 - seo: { title, description, keywords: string[] }
 - contactAction: { type: wechat | phone | form | link | email, label, value }
 - sections: PageSection[]   6-10 个模块
+- hero.mediaType: 必须为 "image"（当 visualMode=1 时）
+- hero.mediaPrompt: 中文图片描述，不涉及具体品牌/人物
+- hero.mediaPosition: "right" 或 "background"
 
 ════════════════════════════════
-▌可选的 layoutPreset(必须选一个)
+▌可视化选择规则
 ════════════════════════════════
 
 ${presetsForPrompt()}
@@ -158,61 +157,27 @@ ${presetsForPrompt()}
 - event_signup → event_campaign_dynamic 或 dynamic_visual 或 manifesto_dark
 - course_sales → course_sales_compact 或 manifesto_dark 或 dynamic_visual
 
-⚠️ visualMode 规则（当 visualMode 开启时,你必须优先选高级视觉预设）:
+⚠️ visualMode 规则:
 - 任意 pageType + visualMode=1 → 强制从 editorial_collage / dynamic_visual / manifesto_dark 中选择
-- 作品集/摄影/设计 + visualMode=1 → editorial_collage
-- AI/科技/工具/产品 + visualMode=1 → dynamic_visual
-- 观点/宣言/品牌 + visualMode=1 → manifesto_dark
-- visualMode=0 或未指定 → 按原有 pageType/style 规则正常选择
+- 作品集/摄影/设计 + visualMode=1 → editorial_collage + backgroundMode=paper_collage
+- AI/科技/工具/产品 + visualMode=1 → dynamic_visual + backgroundMode=particle_flow
+- 观点/宣言/品牌 + visualMode=1 → manifesto_dark + backgroundMode=dark_manifesto
 
-⚠️ 高级预设选择逻辑（重要！根据用户输入判断）:
-- 用户提到"黑底""黑色""宣言""观点""酷""极简黑暗": → 选 manifesto_dark
-- 用户提到"杂志""拼贴""作品集""摄影师""艺术""复古""纸质": → 选 editorial_collage
-- 用户提到"科技""AI""动态""粒子""深色""沉浸""未来""动感": → 选 dynamic_visual
-- 其他常规场景 → 选对应的基础预设
-
-⚠️ backgroundMode 必须与 layoutPreset 保持一致:
+⚠️ backgroundMode 必须与 layoutPreset 一致:
 - manifesto_dark → backgroundMode="dark_manifesto"
 - editorial_collage → backgroundMode="paper_collage"
 - dynamic_visual → backgroundMode="particle_flow"
 - 基础预设 → backgroundMode="plain" 或 "soft_gradient"
 
 ════════════════════════════════
-▌视觉核心原则 - 必须遵守
+▌全局视觉禁令（最高优先级）
 ════════════════════════════════
 
-1. ▌反对模板感▐ - 根据 layoutPreset 的 preferredSections 安排模块顺序,不要所有页面一样。
-   严格按照 preset 的 promptGuidance 生成页面内容和结构。
-
-2. ▌Hero 必须有视觉焦点▐ - 使用 preset 指定的 heroLayout。
-   - center 布局:居中大标题,适合个人品牌
-   - split 布局:左文案右视觉区,适合产品/课程
-   - visual 布局:全宽强视觉,有突出 stats 和 badge
-   - manifesto 布局:黑底白字超大标题,必须带 kicker + badge,适合宣言页
-   - collage 布局: 左侧文案右侧叠层纸卡片(rotation),适合杂志/作品集
-   - immersive 布局: 居中标题叠加粒子背景,适合科技/动态页
-
-3. ▌留白有节奏▐ - preset 的 sectionRhythm 决定整体节奏:
-   - calm:宽松、优雅,section 间大量留白
-   - conversion:紧凑,减少不必要空白,驱动转化
-   - editorial:有层次,穿插数据区和强调引用
-   - dynamic:活力、醒目,大胆的颜色块切换
-
-4. ▌卡片要有层级▐ - 根据 preset 的 cardStyle:
-   - elevated:主卡片阴影更重,有高亮推荐标签
-   - subtle:卡片低调,靠文案和间距区分
-   - bordered:边框明确,干净利落
-   - colorful:卡片带主色或柔和底色
-
-5. ▌文案要像真实品牌▐ - 拒绝▞助力您的业务▞▞优质服务▞这类空洞短语。
-   每句话要具体、可感知,符合该 preset 的行业语境。
-
-6. ▌不同 style 要明显不同▐ -
-   - minimal: 极简白底、极细线条、大面积留白
-   - business: 专业、可信赖、数据感、深基调
-   - elegant: 柔和过渡、圆润圆角、pink/cream 系
-   - tech: 暗色或极简+荧光点缀、几何线条
-   - youthful: 亮色背景块、大圆角、emoji 图标
+🚫 禁止纯白背景贯穿全页！每个页面必须有视觉层次。
+🚫 禁止所有 section 都是普通白色卡片堆叠！必须混合至少 2 种不同视觉布局。
+🚫 禁止 8 个模板生成同一结构！必须遵守模板专属框架。
+🚫 禁止 hero 没有视觉焦点！必须设置 mediaType/image/visualHint。
+🚫 禁止忘记设置 mediaPrompt 字段！
 
 ════════════════════════════════
 ▌模块字段完整定义
@@ -255,117 +220,30 @@ ${presetsForPrompt()}
        items: [{ title, description?, imageUrl?, tag? }] }
 
 ════════════════════════════════
-▌交互内容强制规则（最高优先级）
+▌交互内容强制规则
 ════════════════════════════════
 
-⚠️ 这是最重要的规则！交互后的每个状态都必须像一个完整的小页面或完整内容面板。
-
-▸ 如果生成 interactionType="tabs":
-  - 每个 tab 必须包含: label, title, description, 至少 3 个 items
-  - 每个 item 包含: title, description
-  - items 的 content 要具体、有信息量，不能只是占位
-
-▸ 如果生成 interactionType="accordion" (feature/faq):
-  - features.accordionItems: 每个包含 title, description, highlights(≥2), items(≥3)
-  - faq.accordionItems: 每个包含 question, answer, highlights(可选的附加说明) 
-  - FAQ 默认 interactionType="accordion"，至少 5 项
-
-▸ 如果生成 interactionType="carousel":
-  - features.carouselSlides / testimonials.carouselSlides: 至少 3 页
-  - 每页包含 title, description, highlights(≥2), items(≥2)
-
-▸ 如果生成 interactionType="modal" (hero/cta):
-  - hero.modalTitle, hero.modalDescription, hero.modalHighlights(≥3), hero.modalActionLabel
-  - cta 同上 modalTitle/modalDescription/modalHighlights/modalActionLabel
-
-▸ 如果生成 app_preview:
-  - 至少 3 个 views, 每个 view 包含 id, label, title, description, items(≥3)
-  - 每个 item 包含 title, description, meta 或 status
-  - dashboard view 的 items 至少 4 个（用 meta 作数值）
-  - kanban view 的 items 带 status 值: pending/active/review
-
-▸ 如果生成 dashboard:
-  - 至少 4 个 metrics: label, value, change
-  - 至少 4 个 cards: title, description, value, status
-  - status 值用 active/done/pending/alert
-
-▸ 如果生成 gallery:
-  - 至少 6 个 items: title, description, tag
-  - 不需要 imageUrl（系统会后续填充）
-
-▸ 如果生成 timeline:
-  - 至少 4 个 items: time, title, description
-  - time 格式如 "第1周" / "Day 1-3" / "3月12日"
-
-⚠️ 所有交互后的内容要具体、有信息量，不要空泛。
-不允许生成只有 label 和 title 但没有 items 的 tab。
-不允许生成只有 title 没有 description 的 modal。
-不允许生成 items 少于 3 的 carousel 页。
-不允许生成 content 只有 "暂无内容" 或占位文本的交互组件。
-
-════════════════════════════════
-▌应用型 section 使用规则
-════════════════════════════════
-
-这是 zhinao 的核心进阶能力：你不是只生成静态落地页，
-你也生成可点击的应用原型预览（app_preview / dashboard / timeline / gallery）。
-
-选择规则：
-- 如果用户提到"工具""应用""管理""看板""仪表盘""系统""平台""demo""产品原型""SaaS""内部工具"：
-  → 设置 appMode: "app_preview" 或 "dashboard"
-  → 插入一个 app_preview 或 dashboard section（在 hero 之后 features 之前）
-  → app_preview 至少包含 3 个 views，每个 view 有 3-6 个 items
-  → dashboard 至少包含 4 个 metrics + 3-5 个 cards
-  → 数据要真实感：具体数字、百分比、状态值，不要空泛
-
-- 如果用户提到"课程""训练营""学习路径""活动流程""路线图"：
-  → 插入一个 timeline section
-  → 每条 timeline item 要有具体时间节点（如"第1周""Day 1-3""3月12日"）
-
-- 如果用户提到"作品集""案例""摄影""设计""项目展示"：
-  → 插入一个 gallery section
-  → 设置 appMode: "portfolio_app"
-  → 每个 gallery item 带 tag 标签
-  → 不需要 imageUrl（系统会后续填充）
-
-重要约束：
-- app_preview / dashboard 是与 hero/features/cta 混合使用的，不是替代
-- 页面仍然必须包含 hero 和 cta
-- 总 sections 数量仍控制在 6-10 个
-- views/items 中的文案要具体、可感知、像真实产品数据
-- 不要所有页面都加 app_preview，只在用户确实需要工具/应用/demo 页时才加
-
-════════════════════════════════
-▌参考设计模式
-════════════════════════════════
-参考成熟 SaaS 官网、课程销售页、门店介绍页、个人品牌页的通用设计模式,但不要复制任何现成网站的代码、文案或素材。关注结构感和转化逻辑。
+▸ interactionType="tabs": 每个 tab 至少有 label, title, description, 3 个 items
+▸ interactionType="accordion": features.accordionItems 每个有 title, description, highlights(≥2), items(≥3)
+▸ interactionType="carousel": features.carouselSlides/testimonials.carouselSlides 至少 3 页
+▸ interactionType="modal": hero.modalTitle, modalDescription, modalHighlights(≥3), modalActionLabel
+▸ app_preview: 至少 3 个 views, 每个 view 含 id, label, title, description, items(≥3)
+▸ dashboard: 至少 4 个 metrics(label, value, change) + 至少 4 个 cards(title, description, value, status)
+▸ gallery: 至少 6 个 items(title, description, tag) — 不需要 imageUrl
+▸ timeline: 至少 4 个 items(time, title, description)
 
 ════════════════════════════════
 ▌最终检查清单
 ════════════════════════════════
-1. layoutPreset 已选且正确(匹配 pageType + 用户语气)
+1. layoutPreset 已选且正确
 2. backgroundMode 已选且与 layoutPreset 一致
-3. hero 必须有 layout(用 preset 指定的)
-4. manifest/collage/immersive hero 必须带 kicker 或 badge
-5. features 用 preset 指定的 layout (numbered/collage/masonry)
-6. 至少一个 pricing/testimonials 设了 highlighted/featuredPlanIndex
-7. 不同 pageType 的模块顺序有明显差异
-8. 如果页面适合图片: 设置 hero.mediaType="image"、hero.mediaPrompt、hero.mediaPosition
-   - manifesto_dark: mediaPosition="right" 或 "background"
-   - editorial_collage: mediaPosition="right"
-   - dynamic_visual: mediaPosition="background"
-9. 文案每句话都具体,符合 preset 行业语境
-10. 如果用户需要工具/应用/demo 页: app_preview 有≥3个 views, 每个 view 有≥3个 items
-11. 如果用户需要仪表盘: dashboard 有≥4个 metrics + ≥3个 cards
-12. 如果用户需要课程/流程: timeline 有≥3个 items, 每个带时间节点
-13. 如果用户需要作品集: gallery 有≥6个 items, 每个带 tag
-14. 输出纯 JSON,无装饰、无反引号、无代码块标记
-15. 所有interactionType不为"none"的section，必须附带完整交互内容
-16. 每个交互后的状态都像一个完整的内容面板
-17. 如果 visualMode=1，必须选择高级视觉预设，hero 必须有 mediaType="image"，mediaPrompt 提供中文图片描述（抽象视觉，不涉及具体品牌/人物），mediaPosition 设为 "right" 或 "background"
-18. editorial_collage 预设下 gallery section 必须优先生成，且每个 item 带 imageUrl 字段（留空字符串即可，由系统后处理生成）
-19. dynamic_visual 预设下的 hero 应使用 layout="immersive" 强化科技感
-20. manifesto_dark 预设下的 hero 应使用 layout="manifesto"，带 kicker 和 badge`;
+3. hero 必须有 layout
+4. hero.mediaType 设为 "image", mediaPrompt 提供中文视觉描述
+5. 至少一个 section 使用非默认视觉布局(collage/masonry/numbered/editorial)
+6. 如果适用: app_preview 有≥3 个 views, dashboard 有≥4 metrics, gallery 有≥6 items, timeline 有≥4 items
+7. 文案每句话具体、像真实品牌
+8. 输出纯 JSON，无反引号、无代码块标记
+9. 所有 interactionType 不为 "none" 的 section 附带完整交互内容`;
 
 export function extractJSON(text: string) {
   const trimmed = text.trim();
@@ -381,24 +259,104 @@ export function extractJSON(text: string) {
   return unwrapped;
 }
 
-function buildUserPrompt(params: GeneratePageContentParams) {
-  const template = getTemplateById(params.templateId);
-  const templateBlock = template
-    ? `
+function buildTemplateBlock(templateId: string, userInput: string) {
+  const template = getTemplateById(templateId);
+  if (!template) return "";
 
-⚠️ 已选择模板：${template.name}
-模板说明：${template.description}
-模板风格：${template.promptGuidance}
-必须优先使用：
-- layoutPreset="${template.layoutPreset}"
-- backgroundMode="${template.backgroundMode}"
-- pageType="${template.pageType}"
-- style="${template.style}"
-- primaryColor="${template.primaryColor}"
-推荐模块顺序：${template.recommendedSections.join(" → ")}
-图片/图标搜索线索：${template.imageSearchHints.join("；")}
-请根据用户需求改写文案和模块内容，但不要偏离模板的布局结构、视觉语气和行业适配。`
-    : "";
+  return `
+
+╔══════════════════════════════════════════════════════════════╗
+║ 🏷️  模板专属生成模式：${template.name}
+║ ⚠️  你正在为【${template.name}】模板生成内容
+║ ⚠️  这不是通用网页生成！必须严格遵循模板专属框架！
+║ ⚠️  违反以下任何一条规则都会导致生成质量不合格！
+╚══════════════════════════════════════════════════════════════╝
+
+📋 模板元数据:
+- id: ${template.id}
+- 说明: ${template.description}
+- 行业: ${template.category} (${template.categories.join("/")})
+
+🎨 【强制】视觉框架参数:
+- layoutPreset = "${template.layoutPreset}"        ← 输出时必须使用此值，不可更改！
+- backgroundMode = "${template.backgroundMode}"     ← 输出时必须使用此值，不可更改！
+- interactionMode = "${template.interactionMode}"   ← 输出时必须使用此值，不可更改！
+- appMode = "${template.appMode ?? "landing"}"      ← 输出时必须使用此值，不可更改！
+- pageType = "${template.pageType}"                 ← 输出时必须使用此值，不可更改！
+- style = "${template.style}"                       ← 输出时必须使用此值，不可更改！
+- primaryColor = "${template.primaryColor}"         ← 输出时必须使用此值，不可更改！
+
+🦸 【强制】Hero 框架:
+- layout = "${template.heroFramework.layout}"       ← Hero 必须使用此 layout！
+- 语气: ${template.heroFramework.tone}
+- 视觉方向: ${template.heroFramework.visualDirection}
+- 标题风格: ${template.heroFramework.titleStyle}
+- 副标题风格: ${template.heroFramework.subtitleStyle}
+- CTA 风格: ${template.heroFramework.ctaStyle}
+- 媒体策略: ${template.heroFramework.mediaStrategy}
+
+📐 【强制】模块顺序 — 必须按此顺序排列 sections:
+${template.recommendedSections.map((s, i) => `   ${i + 1}. ${s}`).join("\n")}
+
+✅ 必须包含的模块: ${template.requiredSections.join(", ")}
+❌ 禁止包含的模块: ${template.forbiddenSections?.join(", ") || "无"}
+
+🔧 【强制】模块专属规则:
+${template.sectionFrameworks.map((sf) =>
+  `   ▸ ${sf.sectionType}:
+      - 目的: ${sf.purpose}
+      - 布局提示: ${sf.layoutHint}
+      - 内容规则: ${sf.contentRules.join("；")}
+      - 交互: ${sf.interactionHint}
+      - 图片方向: ${sf.imageHint ?? "无"}`
+).join("\n")}
+
+🎯 【强制】视觉规则:
+${template.visualRules.map((r) => `   ${template.visualRules.indexOf(r) + 1}. ${r}`).join("\n")}
+
+✏️ 【强制】文案规则:
+${template.copywritingRules.map((r) => `   ${template.copywritingRules.indexOf(r) + 1}. ${r}`).join("\n")}
+
+🔗 【强制】交互规则:
+${template.interactionRules.map((r) => `   ${template.interactionRules.indexOf(r) + 1}. ${r}`).join("\n")}
+
+🖼️ 图片搜索线索: ${template.imageSearchHints.join(", ")}
+
+📝 生成框架说明:
+${template.promptFramework}
+
+🚫 禁止事项:
+${template.negativePromptRules.map((r) => `   ${template.negativePromptRules.indexOf(r) + 1}. ${r}`).join("\n")}
+
+✅ 质量检查:
+${template.qualityChecklist.map((r) => `   ${template.qualityChecklist.indexOf(r) + 1}. ${r}`).join("\n")}
+
+══════════════════════════════════════════════════════════════
+🔥 现在请根据用户需求「${userInput.slice(0, 100)}」，生成【${template.name}】模板的专属 PageContent JSON。
+
+⚠️ 最后提醒:
+1. layoutPreset/backgroundMode/heroLayout 必须与模板指定值完全一致
+2. section 顺序必须遵循模板 recommendedSections 顺序
+3. 必须包含 requiredSections 中的所有模块
+4. 绝对不能包含 forbiddenSections 中的模块
+5. 每个模块的视觉布局(layout字段)必须匹配模板专属规则
+6. 不使用纯白背景 — 整页必须有模板对应的背景模式
+7. 不使用"卡片堆叠"替代模板要求的 collage/masonry/numbered/editorial 布局
+8. features 的 layout 字段必须与模板要求一致
+9. testimonials 的 layout 字段必须与模板要求一致
+10. 输出纯 JSON，无反引号、无代码块标记
+══════════════════════════════════════════════════════════════`;
+}
+
+function buildUserPrompt(params: GeneratePageContentParams) {
+  const templateBlock = params.templateId ? buildTemplateBlock(params.templateId, params.userInput) : "";
+
+  // When templateId exists, the template block IS the main content — don't append generic instructions
+  if (templateBlock) {
+    return `请为【用户需求: ${params.userInput}】生成 PageContent JSON。
+
+${templateBlock}`;
+  }
 
   const visualBlock = params.visualMode
     ? `
@@ -420,13 +378,12 @@ function buildUserPrompt(params: GeneratePageContentParams) {
 页面类型：${params.pageType}
 视觉风格：${params.style}
 主色调：${params.primaryColor}
-目标动作：${params.contactAction}${templateBlock}${visualBlock}
+目标动作：${params.contactAction}${visualBlock}
 
 重要要求：
-- 根据 pageType/templateId 选择对应的 layoutPreset（必须输出该字段）
-- 如果提供 templateId，优先使用模板指定的 layoutPreset、backgroundMode 和 recommendedSections
-- 严格按照选中 preset 或模板的 promptGuidance 生成内容
-- 按照 preset/template 的 preferredSections 或 recommendedSections 安排模块顺序
+- 根据 pageType 选择对应的 layoutPreset（必须输出该字段）
+- 严格按照选中 preset 的 promptFramework/heroFramework/sectionFrameworks 生成内容
+- 按照 preset 的 preferredSections 安排模块顺序
 - hero 用 preset 指定的 heroLayout
 - testimonials 用 preset 指定的 layout
 - cta 用 preset 指定的 ctaStyle

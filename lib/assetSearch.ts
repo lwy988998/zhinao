@@ -14,6 +14,7 @@ type FoundPageImages = {
   galleryImageUrls?: string[];
   iconImageUrls?: string[];
   sources: AssetSource[];
+  inspirationSummary?: string;
 };
 
 const pageTypeHints: Record<PageType, string> = {
@@ -25,7 +26,7 @@ const pageTypeHints: Record<PageType, string> = {
 };
 
 function uniqueStrings(values: Array<string | undefined>): string[] {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))));
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim())))).slice(0, 10);
 }
 
 function pickImageUrls(results: SearchAsset[]): string[] {
@@ -54,15 +55,24 @@ export async function findPageImages(params: FindPageImagesParams): Promise<Foun
     pageTypeHints[params.pageType],
   ]);
 
-  const baseQuery = uniqueStrings([params.pageTitle, hints.slice(0, 2).join(" ")]).join(" ");
+  const styleHints = template
+    ? `${template.style} ${template.backgroundMode} ${template.primaryColor} design`
+    : "";
+
+  const baseQuery = uniqueStrings([
+    params.pageTitle.slice(0, 30),
+    hints.slice(0, 3).join(" "),
+    styleHints,
+  ]).join(" ");
+
   const queries = uniqueStrings([
-    `${baseQuery} high quality hero image no logo`,
-    `${params.pageTitle} ${hints[0] ?? "website"} gallery images`,
-    `${params.pageTitle} ${hints[1] ?? "brand"} icon illustration`,
+    `${baseQuery} high quality hero no logo no watermark no brand`,
+    `${hints.slice(1, 5).join(" ")} gallery reference no logo`,
+    `${hints.slice(0, 3).join(" ")} ${styleHints} no logo no brand`,
   ]);
 
   try {
-    const [heroResults, galleryResults, iconResults] = await Promise.all([
+    const [heroResults, galleryResults, styleResults] = await Promise.all([
       searchWebAssets({ query: queries[0], count: 6, type: "image" }),
       searchWebAssets({ query: queries[1] ?? queries[0], count: 8, type: "image" }),
       searchWebAssets({ query: queries[2] ?? queries[0], count: 4, type: "image" }),
@@ -70,32 +80,46 @@ export async function findPageImages(params: FindPageImagesParams): Promise<Foun
 
     const heroUrls = pickImageUrls(heroResults);
     const galleryUrls = pickImageUrls(galleryResults);
-    const iconUrls = pickImageUrls(iconResults);
+    const iconStyleUrls = pickImageUrls(styleResults);
     const sources = [
       ...heroResults.map((asset, index) => toSource(asset, index === 0 ? "hero" : "cover", index)),
       ...galleryResults.map((asset, index) => toSource(asset, "gallery", index)),
-      ...iconResults.map((asset, index) => toSource(asset, "icon", index)),
+      ...styleResults.map((asset, index) => toSource(asset, "icon", index)),
     ].slice(0, 18);
+
+    const inspirationSummary = template
+      ? `模板「${template.name}」搜图方向: ${template.imageSearchHints.slice(0, 4).join("、")}`
+      : `搜索方向: ${hints.slice(0, 4).join("、")}`;
+
+    console.log(`[asset-search] template=${params.templateId ?? "none"} hero=${heroUrls.length} gallery=${galleryUrls.length} icon=${iconStyleUrls.length}`);
 
     return {
       heroImageUrl: heroUrls[0],
-      galleryImageUrls: galleryUrls.slice(0, 6),
-      iconImageUrls: iconUrls.slice(0, 4),
+      galleryImageUrls: galleryUrls.slice(0, 8),
+      iconImageUrls: iconStyleUrls.slice(0, 4),
       sources,
+      inspirationSummary,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.log(`[asset-search] failed=${message.slice(0, 120)}`);
-    return { sources: [] };
+    return {
+      sources: [],
+      inspirationSummary: template
+        ? `模板「${template.name}」推荐搜图方向: ${template.imageSearchHints.slice(0, 4).join("、")}`
+        : undefined,
+    };
   }
 }
 
 export function applyFoundImages(content: PageContent, found: FoundPageImages): PageContent {
   const assets = { ...(content.assets ?? {}) };
-  if (found.sources.length > 0) assets.sources = found.sources;
+  if (found.sources.length > 0) assets.sources = [...(assets.sources ?? []), ...found.sources].slice(0, 24);
   if (found.heroImageUrl) assets.heroImageUrl = found.heroImageUrl;
   if (found.galleryImageUrls?.length) assets.collageImageUrls = found.galleryImageUrls;
-  assets.coverImageUrl = assets.heroImageUrl ?? assets.collageImageUrls?.[0] ?? assets.coverImageUrl;
+
+  const coverCandidate = assets.heroImageUrl ?? assets.collageImageUrls?.[0];
+  if (coverCandidate) assets.coverImageUrl = coverCandidate;
 
   const sections = content.sections.map((section) => {
     if (section.type === "hero" && found.heroImageUrl) {

@@ -300,9 +300,19 @@ function GenerateForm() {
         </div>
 
         {selectedTemplate ? (
-          <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-            <span className="text-base">▦</span>
-            <span>已选择模板：{selectedTemplate.name}</span>
+          <div className="mb-6 space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base">▦</span>
+              <span className="font-medium text-slate-950">已选择模板：{selectedTemplate.name}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">AI 将按照该模板的专属框架生成</span>
+            </div>
+            <p className="text-sm text-slate-600">{selectedTemplate.tagline}</p>
+            <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-500">
+              <span className="rounded-md border border-slate-200 px-2 py-1">布局 {selectedTemplate.layoutPreset}</span>
+              <span className="rounded-md border border-slate-200 px-2 py-1">背景 {selectedTemplate.backgroundMode}</span>
+              <span className="rounded-md border border-slate-200 px-2 py-1">交互 {selectedTemplate.interactionMode}</span>
+              <span className="rounded-md border border-slate-200 px-2 py-1">Hero {selectedTemplate.heroFramework.layout}</span>
+            </div>
           </div>
         ) : null}
 
@@ -365,7 +375,7 @@ function GenerateForm() {
                 disabled={isLoading}
                 className="inline-flex h-9 items-center justify-center rounded-full bg-red-700 px-4 text-xs font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                使用稳定模式生成
+                {selectedTemplate ? "使用模板稳定模式生成" : "使用稳定模式生成"}
               </button>
             </div>
           ) : null}
