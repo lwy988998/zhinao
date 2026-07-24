@@ -1,8 +1,8 @@
-import { mockPageContent } from "@/data/mockPage";
-import { isValidPageContent } from "@/lib/pageValidation";
 import { presetsForPrompt } from "@/lib/layoutPresets";
+import { createFallbackPageContent } from "@/lib/generateFallback";
+import { normalizePageContent } from "@/lib/pagePostProcess";
 import { getTemplateById } from "@/lib/templates";
-import type { ContactActionType, PageContent, PageSection, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
+import type { ContactActionType, PageContent, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GeneratePageContentParams = {
   userInput: string;
@@ -12,6 +12,18 @@ type GeneratePageContentParams = {
   contactAction: ContactActionType;
   visualMode?: boolean;
   templateId?: string;
+  forceFallback?: boolean;
+};
+
+export type GenerateProvider = "primary" | "fallback" | "template_fallback" | "mock_fallback";
+
+export type GeneratePageContentResult = {
+  content: PageContent;
+  meta: {
+    provider: GenerateProvider;
+    providerTried: string[];
+    warnings: string[];
+  };
 };
 
 type ChatCompletionResponse = {
@@ -424,100 +436,83 @@ function buildUserPrompt(params: GeneratePageContentParams) {
 - 输出纯 JSON，无任何包装`;
 }
 
-function normalizeSection(section: PageSection, index: number): PageSection {
-  return {
-    ...section,
-    id: section.id ?? `${section.type}-${index + 1}`,
-    visible: section.visible ?? true,
-  };
-}
+export async function generatePageContent(params: GeneratePageContentParams): Promise<GeneratePageContentResult> {
+  const providerTried: string[] = [];
+  const warnings: string[] = [];
 
-function normalizePageContent(content: PageContent): PageContent {
-  return {
-    ...content,
-    sections: content.sections.map(normalizeSection),
-  };
-}
-
-export async function generatePageContent(params: GeneratePageContentParams): Promise<PageContent> {
   if (process.env.AI_USE_MOCK === "true") {
-    return normalizePageContent(mockPageContent);
+    return {
+      content: normalizePageContent(createFallbackPageContent(params, params.templateId ? "template_fallback" : "mock_fallback"), params),
+      meta: { provider: params.templateId ? "template_fallback" : "mock_fallback", providerTried, warnings: ["AI 服务波动，已使用稳定模式生成，可继续编辑。"] },
+    };
   }
+
+  const primary = buildProviderConfig("AI_API_KEY", "AI_BASE_URL", "AI_MODEL", "primary");
+  const fallback = buildProviderConfig("AI_API_KEY_FALLBACK", "AI_BASE_URL_FALLBACK", "AI_MODEL_FALLBACK", "fallback");
+  console.log(`[AI] fallback configured: ${fallback ? "YES" : "NO"}`);
 
   const providers: ProviderConfig[] = [];
-
-  // 主 API
-  const primary = buildProviderConfig("AI_API_KEY", "AI_BASE_URL", "AI_MODEL", "primary");
-  if (primary) providers.push(primary);
-
-  // 备 API(DeepSeek 等)
-  const fallback = buildProviderConfig("AI_API_KEY_FALLBACK", "AI_BASE_URL_FALLBACK", "AI_MODEL_FALLBACK", "fallback");
+  if (!params.forceFallback && primary) providers.push(primary);
   if (fallback) providers.push(fallback);
-
-  if (providers.length === 0) {
-    throw new Error("AI API 未配置");
-  }
+  if (params.forceFallback && primary && !fallback) warnings.push("fallback 未配置，已直接使用稳定模式。 ");
+  if (providers.length === 0 && primary && !params.forceFallback) providers.push(primary);
 
   const userPrompt = buildUserPrompt(params);
   let lastError: Error | null = null;
 
   for (const provider of providers) {
+    providerTried.push(provider.label);
     try {
-      console.log(`[ai debug] trying provider=${provider.label}`);
-
+      if (provider.label === "fallback") console.log("[AI] fallback started");
       const result = await callAIProvider(provider, systemPrompt, userPrompt);
       const content = result.choices?.[0]?.message?.content;
 
       if (!content) {
         lastError = new Error(`[${provider.label}] AI 返回内容为空`);
-        console.log(`[ai debug] provider=${provider.label} empty content, trying next...`);
+        console.log(`[AI] ${provider.label} failed: empty content`);
+        warnings.push(`${provider.label} 返回内容为空`);
         continue;
       }
 
       let parsed: unknown;
-
       try {
         parsed = JSON.parse(extractJSON(content));
-      } catch {
-        lastError = new Error(`[${provider.label}] AI 返回内容不是有效 JSON`);
-        console.log(`[ai debug] provider=${provider.label} invalid JSON, trying next...`);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.log(`[AI] ${provider.label} failed: invalid JSON`);
+        warnings.push(`${provider.label} 返回 JSON 不完整，已尝试下一个生成通道。`);
         continue;
       }
 
-      if (!isValidPageContent(parsed)) {
-        const keys = typeof parsed === "object" && parsed !== null ? Object.keys(parsed as Record<string, unknown>).join(", ") : typeof parsed;
-        console.log(`[ai debug] provider=${provider.label} invalid structure. top-level keys: ${keys}`);
-        lastError = new Error(`[${provider.label}] AI 返回内容不符合 PageContent 结构`);
-        console.log(`[ai debug] provider=${provider.label} invalid structure, trying next...`);
-        continue;
-      }
-
-      console.log(`[ai debug] provider=${provider.label} success`);
-      const pageContent = normalizePageContent(parsed);
-      // Preserve visualMode in the final output
-      if (params.visualMode) pageContent.visualMode = true;
-      const template = getTemplateById(params.templateId);
-      if (template) {
-        pageContent.pageType = template.pageType;
-        pageContent.theme = {
-          ...pageContent.theme,
-          style: template.style,
-          primaryColor: template.primaryColor,
-        };
-        pageContent.layoutPreset = template.layoutPreset;
-        pageContent.backgroundMode = template.backgroundMode as PageContent["backgroundMode"];
-        pageContent.visualMode = template.visualMode || pageContent.visualMode;
-      }
-      return pageContent;
+      const pageContent = normalizePageContent(parsed, params);
+      console.log(`[AI] ${provider.label} succeeded`);
+      if (provider.label === "fallback") console.log("[AI] fallback succeeded");
+      return {
+        content: pageContent,
+        meta: {
+          provider: provider.label === "fallback" ? "fallback" : "primary",
+          providerTried,
+          warnings,
+        },
+      };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`[ai debug] provider=${provider.label} failed: ${lastError.message}`);
-      // Continue to next provider
+      const summary = lastError.message.slice(0, 180);
+      console.log(`[AI] ${provider.label} failed: ${summary}`);
+      warnings.push(`${provider.label} 生成失败，已自动切换。`);
     }
   }
 
-  // All providers failed
-  const summary = lastError?.message ?? "未知错误";
-  console.log(`[ai debug] all providers failed. last error: ${summary}`);
-  throw new Error(summary);
+  const fallbackSource = params.templateId ? "template_fallback" : "mock_fallback";
+  const summary = lastError?.message ?? "AI provider 未配置或不可用";
+  console.log(`[AI] all providers failed: ${summary.slice(0, 180)}`);
+  warnings.push("AI 服务波动，已使用稳定模式生成，可继续编辑。");
+  return {
+    content: normalizePageContent(createFallbackPageContent(params, fallbackSource), params),
+    meta: {
+      provider: fallbackSource,
+      providerTried,
+      warnings,
+    },
+  };
 }

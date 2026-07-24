@@ -44,40 +44,24 @@ function isSection(section: unknown): section is PageSection {
     return false;
   }
 
-  switch (section.type) {
-    case "hero":
-      return (
-        isNonEmptyString(section.title) &&
-        typeof section.subtitle === "string" &&
-        typeof section.buttonText === "string" &&
-        typeof section.buttonAction === "string"
-      );
-    case "features":
-    case "pain_points":
-    case "testimonials":
-    case "faq":
-      return Array.isArray(section.items);
-    case "app_preview":
-      return Array.isArray(section.views);
-    case "dashboard":
-      return Array.isArray(section.metrics) && Array.isArray(section.cards);
-    case "timeline":
-      return Array.isArray(section.items);
-    case "gallery":
-      return Array.isArray(section.items);
-    case "solution":
-      return typeof section.description === "string" && Array.isArray(section.items);
-    case "process":
-      return Array.isArray(section.steps);
-    case "pricing":
-      return Array.isArray(section.items) || Array.isArray(section.plans);
-    case "contact":
-      return typeof section.description === "string";
-    case "cta":
-      return typeof section.description === "string" && typeof section.buttonText === "string" && typeof section.buttonAction === "string";
-    default:
-      return false;
-  }
+  const knownTypes = new Set([
+    "hero",
+    "features",
+    "pain_points",
+    "solution",
+    "process",
+    "pricing",
+    "testimonials",
+    "faq",
+    "contact",
+    "cta",
+    "app_preview",
+    "dashboard",
+    "timeline",
+    "gallery",
+  ]);
+
+  return knownTypes.has(section.type);
 }
 
 export function isValidPageContent(input: unknown): input is PageContent {
@@ -101,18 +85,17 @@ export function isValidPageContent(input: unknown): input is PageContent {
     isRecord(seo) &&
     isNonEmptyString(seo.title) &&
     isNonEmptyString(seo.description) &&
-    isStringArray(seo.keywords) &&
+    (seo.keywords === undefined || isStringArray(seo.keywords)) &&
     isRecord(contactAction) &&
     isContactActionType(contactAction.type) &&
     isNonEmptyString(contactAction.label) &&
     isNonEmptyString(contactAction.value) &&
     Array.isArray(sections) &&
-    sections.length >= 6 &&
-    sections.length <= 10 &&
-    sections.every(isSection) &&
-    sections[0]?.type === "hero" &&
-    sections.some((section) => section.type === "contact") &&
-    sections.at(-1)?.type === "cta"
+    sections.length >= 1 &&
+    sections.length <= 20 &&
+    sections.some((section) => isRecord(section) && section.type === "hero") &&
+    sections.some((section) => isRecord(section) && section.type === "cta") &&
+    sections.filter(isSection).length > 0
   );
 }
 

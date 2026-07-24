@@ -14,6 +14,7 @@ type GenerateParams = {
   contactAction: ContactActionType;
   visualMode: boolean;
   templateId?: string;
+  forceFallback?: boolean;
 };
 
 const pageTypes: PageType[] = ["personal_profile", "product_service", "local_business", "event_signup", "course_sales"];
@@ -77,6 +78,7 @@ function validateRequestBody(body: unknown): { success: true; data: GeneratePara
       contactAction: body.contactAction,
       visualMode: template?.visualMode ?? body.visualMode === true,
       templateId,
+      forceFallback: body.forceFallback === true,
     },
   };
 }
@@ -97,10 +99,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const data = await generatePageContent(validation.data);
+    const generated = await generatePageContent(validation.data);
+    const warnings = [...generated.meta.warnings];
 
     // Post-process: ensure interactive content is never empty
-    const withContent = enrichInteractiveContent(data);
+    const withContent = enrichInteractiveContent(generated.content);
 
     let enriched = withContent;
 
@@ -117,15 +120,30 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.log(`[asset-search] non-fatal=${message.slice(0, 120)}`);
+        warnings.push("图片搜索暂不可用，已跳过图片来源补全。");
       }
     }
 
     // Enrich with AI-generated images when no searched hero image is available.
     if (!enriched.assets?.heroImageUrl) {
-      enriched = await enrichPageWithImages(enriched);
+      try {
+        enriched = await enrichPageWithImages(enriched);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`[image] non-fatal=${message.slice(0, 120)}`);
+        warnings.push("图片生成暂不可用，已保留可编辑页面。");
+      }
     }
 
-    return NextResponse.json({ success: true, data: enriched });
+    return NextResponse.json({
+      success: true,
+      data: enriched,
+      meta: {
+        provider: generated.meta.provider,
+        providerTried: generated.meta.providerTried,
+        warnings,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "未知错误";
     console.error("/api/generate", message);
@@ -137,7 +155,7 @@ export async function POST(request: NextRequest) {
       : "AI 生成失败，请稍后重试";
 
     return NextResponse.json(
-      { success: false, error: clientMessage },
+      { success: false, error: clientMessage, meta: { providerTried: [], warnings: ["生成链路异常，请检查服务配置。"] } },
       { status: 500 },
     );
   }

@@ -11,8 +11,8 @@ import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageContent, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GenerateResponse =
-  | { success: true; data: PageContent }
-  | { success: false; error: string };
+  | { success: true; data: PageContent; meta?: { provider?: string; warnings?: string[] } }
+  | { success: false; error: string; data?: PageContent; meta?: { provider?: string; warnings?: string[] } };
 
 const loadingSteps = [
   "正在理解你的需求...",
@@ -233,8 +233,7 @@ function GenerateForm() {
   }
 
   // ── Submit ──
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitGenerate(forceFallback = false) {
     if (!validate()) return;
     setSubmitError("");
     setIsLoading(true);
@@ -248,20 +247,33 @@ function GenerateForm() {
           pageType, style, primaryColor, contactAction,
           visualMode: queryVisual,
           templateId: selectedTemplate?.id,
+          forceFallback,
         }),
       });
       const payload = (await response.json()) as GenerateResponse;
-      if (!response.ok || !payload.success) {
-        setSubmitError(payload.success ? "AI 生成失败，请稍后重试" : payload.error);
+      if ("data" in payload && payload.data) {
+        window.localStorage.setItem("currentPageContent", JSON.stringify(payload.data));
+        if (payload.meta?.warnings?.length) {
+          window.localStorage.setItem("generationWarnings", JSON.stringify(payload.meta.warnings));
+        }
+        router.push("/editor");
         return;
       }
-      window.localStorage.setItem("currentPageContent", JSON.stringify(payload.data));
-      router.push("/editor");
+      if (!response.ok || !payload.success) {
+        const message = payload.success ? "AI 服务繁忙，请使用稳定模式生成。" : payload.error;
+        setSubmitError(selectedTemplate ? `模板生成失败：${message}` : message);
+        return;
+      }
     } catch {
-      setSubmitError("AI 生成失败，请稍后重试");
+      setSubmitError("网络错误，未能连接生成服务。可以尝试使用稳定模式生成。");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitGenerate(false);
   }
 
   // ── Highlight field class ──
@@ -345,7 +357,17 @@ function GenerateForm() {
           </div>
 
           {submitError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{submitError}</div>
+            <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+              <p>{submitError}</p>
+              <button
+                type="button"
+                onClick={() => void submitGenerate(true)}
+                disabled={isLoading}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-red-700 px-4 text-xs font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                使用稳定模式生成
+              </button>
+            </div>
           ) : null}
 
           {isLoading ? <LoadingSteps steps={loadingSteps} currentStep={currentStep} /> : null}
@@ -355,7 +377,7 @@ function GenerateForm() {
               {isLoading ? "正在生成..." : "生成网页"}
             </Button>
             {submitError ? (
-              <span className="text-sm text-slate-500">修改需求后可以直接重试，也可以原样再次提交。</span>
+              <span className="text-sm text-slate-500">修改需求后可以重试，或直接使用稳定模式生成可编辑页面。</span>
             ) : null}
           </div>
         </form>
