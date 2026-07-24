@@ -33,10 +33,11 @@ const templateMeta = {
   warm_brand_story: { accent: "from-orange-50 to-rose-100", chip: "bg-rose-100 text-rose-700", emoji: "🌿" },
   mobile_campaign_card: { accent: "from-orange-400 to-amber-300", chip: "bg-orange-100 text-orange-700", emoji: "📱" },
   editorial_portfolio: { accent: "from-stone-100 to-stone-200", chip: "bg-stone-200 text-stone-700", emoji: "📰" },
+  full_image_brand: { accent: "from-stone-950 to-stone-200", chip: "bg-stone-100 text-stone-700", emoji: "▣" },
   dashboard_app_demo: { accent: "from-slate-950 to-purple-950", chip: "bg-purple-100 text-purple-700", emoji: "📊" },
 } as const;
 
-function TemplatePreview({ style, templateId }: { style: TemplatePreviewStyle; templateId: string }) {
+function TemplatePreview({ style }: { style: TemplatePreviewStyle }) {
   const base = "relative h-48 overflow-hidden rounded-t-2xl border-b";
 
   if (style === "liquid_glass") {
@@ -126,6 +127,34 @@ function TemplatePreview({ style, templateId }: { style: TemplatePreviewStyle; t
     );
   }
 
+  if (style === "full_image_brand") {
+    return (
+      <div className={`${base} border-stone-300/50 bg-stone-950`}>
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.28)_48%,rgba(246,243,237,0.2)_100%),radial-gradient(circle_at_72%_35%,rgba(245,245,244,0.22),transparent_34%)]" />
+        <div className="absolute left-0 right-0 top-0 flex items-center justify-between border-b border-white/15 px-7 py-4 text-white/70">
+          <div className="h-2 w-20 bg-white/55" />
+          <div className="flex gap-3">
+            <div className="h-1.5 w-8 bg-white/35" />
+            <div className="h-1.5 w-8 bg-white/25" />
+            <div className="h-1.5 w-8 bg-white/25" />
+          </div>
+        </div>
+        <div className="absolute left-8 top-20 max-w-[9rem] space-y-3">
+          <div className="h-2 w-14 bg-white/35" />
+          <div className="h-7 w-32 bg-white/75" />
+          <div className="h-7 w-24 bg-white/55" />
+          <div className="h-2 w-28 bg-white/28" />
+          <div className="h-8 w-20 border border-white/60 bg-white/80" />
+        </div>
+        <div className="absolute bottom-5 right-5 grid h-16 w-28 grid-cols-3 gap-1.5">
+          <div className="bg-stone-200/65" />
+          <div className="bg-stone-400/65" />
+          <div className="bg-stone-100/65" />
+        </div>
+      </div>
+    );
+  }
+
   if (style === "editorial_collage") {
     return (
       <div className={`${base} border-stone-300/50 bg-gradient-to-br from-stone-100 via-amber-50 to-stone-100`}>
@@ -190,7 +219,7 @@ export function TemplatesClient() {
           const meta = templateMeta[template.id as keyof typeof templateMeta] ?? templateMeta.dashboard_app_demo;
           return (
             <article key={template.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-              <TemplatePreview style={template.previewStyle} templateId={template.id} />
+              <TemplatePreview style={template.previewStyle} />
               <div className="space-y-3 p-5">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{meta.emoji}</span>

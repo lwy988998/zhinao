@@ -15,6 +15,7 @@ const templateMeta = {
   warm_brand_story: { emoji: "🌿", bgClass: "bg-gradient-to-br from-orange-50 via-rose-50 to-amber-50" },
   mobile_campaign_card: { emoji: "📱", bgClass: "bg-gradient-to-br from-orange-400 to-amber-400" },
   editorial_portfolio: { emoji: "📰", bgClass: "bg-[#f7f4ef]" },
+  full_image_brand: { emoji: "▣", bgClass: "bg-[#f6f3ed]" },
   dashboard_app_demo: { emoji: "📊", bgClass: "bg-slate-950" },
 } as const;
 

@@ -311,6 +311,26 @@ function ParticleFlowBg({ children }: { children: React.ReactNode }) {
 }
 
 // ════════════════════════════════════════════════════════════
+// Image Fullscreen — page-level paper backdrop only; hero owns the image
+// ════════════════════════════════════════════════════════════
+
+function ImageFullscreenBg({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative min-h-screen bg-[#f6f3ed] text-slate-950">
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg width='180' height='180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E\")",
+        }}
+      />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-64 bg-gradient-to-b from-white/80 to-transparent" />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
 // Main component
 // ════════════════════════════════════════════════════════════
 
@@ -324,6 +344,8 @@ export function VisualBackground({ mode, children }: Props) {
       return <ParticleFlowBg>{children}</ParticleFlowBg>;
     case "soft_gradient":
       return <SoftGradientBg>{children}</SoftGradientBg>;
+    case "image_fullscreen":
+      return <ImageFullscreenBg>{children}</ImageFullscreenBg>;
     case "plain":
     default:
       return <div className="min-h-screen bg-slate-50">{children}</div>;

@@ -29,6 +29,7 @@ function isRenderableSection(section: PageSection) {
 }
 
 function hasAppShell(content: PageContent) {
+  if (content.layoutPreset === "full_image_brand") return false;
   return content.appMode === "app_preview" || content.appMode === "dashboard" || content.appMode === "knowledge_base" || content.appMode === "portfolio_app" || Boolean(content.navigation);
 }
 
@@ -94,12 +95,13 @@ function sectionBg(
 function renderSection(
   section: PageSection,
   theme: ReturnType<typeof getThemeClasses>,
+  content: PageContent,
 ) {
   const key = section.id ?? section.type;
 
   switch (section.type) {
     case "hero":
-      return <HeroSectionView key={key} section={section} theme={theme} />;
+      return <HeroSectionView key={key} section={section} theme={theme} content={content} />;
     case "features":
       return <FeaturesSectionView key={key} section={section} theme={theme} />;
     case "pain_points":
@@ -157,7 +159,7 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
             section.id;
           return (
             <div id={wrapperId} key={section.id ?? section.type} className={bg}>
-              {renderSection(section, theme)}
+              {renderSection(section, theme, content)}
             </div>
           );
         })
@@ -174,7 +176,7 @@ export function PageRenderer({ content, mode = "preview" }: Props) {
   );
 
   const inner = (
-    <main className={isDark ? "text-white" : "min-h-screen bg-white text-slate-900"}>
+    <main className={isDark ? "text-white" : content.layoutPreset === "full_image_brand" ? "min-h-screen bg-[#f6f3ed] text-slate-900" : "min-h-screen bg-white text-slate-900"}>
       {/* Info strip — only in preview */}
       {mode === "preview" && (
         <div className="mx-auto max-w-6xl px-5 pt-5 sm:px-8">

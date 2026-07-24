@@ -235,7 +235,7 @@ function arr(value: unknown): unknown[] {
 }
 
 function validBackground(value: unknown, fallback: PageContent["backgroundMode"]): PageContent["backgroundMode"] {
-  return value === "plain" || value === "soft_gradient" || value === "dark_manifesto" || value === "paper_collage" || value === "particle_flow" ? value : fallback;
+  return value === "plain" || value === "soft_gradient" || value === "dark_manifesto" || value === "paper_collage" || value === "particle_flow" || value === "image_fullscreen" ? value : fallback;
 }
 
 function normalizeKnownSection(section: unknown, index: number, fallback: PageSection): PageSection | null {
@@ -305,7 +305,7 @@ function normalizeKnownSection(section: unknown, index: number, fallback: PageSe
   }
 
   if (section.type === "gallery") {
-    const items = arr(section.items).filter(isRecord).map((item, itemIndex) => ({ title: str(item.title, `展示图 ${itemIndex + 1}`), description: typeof item.description === "string" ? item.description : undefined, imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : undefined, tag: typeof item.tag === "string" ? item.tag : undefined }));
+    const items = arr(section.items).filter(isRecord).map((item, itemIndex) => ({ title: str(item.title, `展示图 ${itemIndex + 1}`), description: typeof item.description === "string" ? item.description : undefined, imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : undefined, tag: typeof item.tag === "string" ? item.tag : undefined, category: typeof item.category === "string" ? item.category : undefined }));
     return { ...fallback, ...section, ...common, type: "gallery", title: str(section.title, "视觉展示"), items: items.length ? items : fallback.type === "gallery" ? fallback.items : [] } as PageSection;
   }
 
@@ -335,29 +335,61 @@ export function applyTemplateFramework(content: PageContent, template: TemplateP
   });
 
   const correctedSections = sections.map((section) => {
+    const fullImageBrand = template.id === "full_image_brand";
+    if (fullImageBrand && section.type === "solution") {
+      return { ...section, id: section.id === "solution" ? "brand-story" : section.id };
+    }
+    if (fullImageBrand && section.type === "features") {
+      return {
+        ...section,
+        id: section.id === "features" ? "product-series" : section.id,
+        title: section.title || "产品系列与设计理念",
+        layout: section.layout === "image_grid" || section.layout === "product_grid" ? section.layout : "product_grid" as const,
+      };
+    }
+    if (fullImageBrand && section.type === "process") {
+      return { ...section, id: section.id === "process" ? "craft" : section.id, title: section.title || "材质工艺" };
+    }
+    if (fullImageBrand && section.type === "gallery") {
+      return { ...section, id: section.id ?? "gallery", layout: "full_bleed_grid" as const };
+    }
     if (section.type !== "hero") return section;
     return {
       ...section,
-      layout: section.layout ?? template.heroFramework.layout,
+      layout: fullImageBrand ? "fullscreen_image" as const : section.layout ?? template.heroFramework.layout,
       mediaType: section.mediaType === "image" || section.mediaType === "canvas" ? section.mediaType : "image" as const,
-      mediaPosition: section.mediaPosition ?? (template.heroFramework.layout === "immersive" ? "background" as const : "right" as const),
+      mediaPosition: fullImageBrand ? "background" as const : section.mediaPosition ?? (template.heroFramework.layout === "immersive" || template.heroFramework.layout === "fullscreen_image" ? "background" as const : "right" as const),
+      overlay: fullImageBrand ? section.overlay ?? "gradient" as const : section.overlay,
+      navStyle: fullImageBrand ? section.navStyle ?? "overlay" as const : section.navStyle,
       visualHint: section.visualHint ?? template.heroFramework.visualDirection,
       mediaPrompt: section.mediaPrompt ?? template.heroFramework.mediaStrategy,
-      interactionType: section.interactionType ?? (template.interactionMode === "interactive_demo" ? "tabs" as const : template.interactionMode === "interactive_showcase" ? "carousel" as const : "none" as const),
+      interactionType: fullImageBrand ? "none" as const : section.interactionType ?? (template.interactionMode === "interactive_demo" ? "tabs" as const : template.interactionMode === "interactive_showcase" ? "carousel" as const : "none" as const),
     };
   });
 
   const hasAppStructure = template.appMode === "dashboard" || template.appMode === "app_preview";
-  const navigation = hasAppStructure
-    ? content.navigation ?? {
-        type: "hybrid" as const,
-        items: correctedSections.slice(0, 6).map((section) => ({
-          id: section.id ?? section.type,
-          label: section.title ?? section.type,
-          targetSectionId: section.id ?? section.type,
-        })),
+  const navigation = template.id === "full_image_brand"
+    ? {
+        type: "top" as const,
+        items: [
+          { id: "nav-brand-story", label: "品牌故事", targetSectionId: correctedSections.some((s) => s.id === "brand-story") ? "brand-story" : correctedSections.find((s) => s.type === "solution")?.id },
+          { id: "nav-design", label: "设计理念", targetSectionId: correctedSections.find((s) => s.type === "features")?.id },
+          { id: "nav-products", label: "产品系列", targetSectionId: correctedSections.find((s) => s.type === "features")?.id },
+          { id: "nav-craft", label: "材质工艺", targetSectionId: correctedSections.find((s) => s.type === "process")?.id },
+          { id: "nav-scenes", label: "应用场景", targetSectionId: correctedSections.find((s) => s.type === "gallery")?.id },
+          { id: "nav-contact", label: "联系我们", targetSectionId: "section-contact" },
+        ],
       }
-    : content.navigation;
+    : hasAppStructure
+      ? content.navigation ?? {
+          type: "hybrid" as const,
+          items: correctedSections.slice(0, 6).map((section) => ({
+            id: section.id ?? section.type,
+            label: section.title ?? section.type,
+            targetSectionId: section.id ?? section.type,
+          })),
+        }
+      : content.navigation;
 
   return {
     ...content,

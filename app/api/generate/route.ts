@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePageContent } from "@/lib/ai";
 import { applyFoundImages, findPageImages } from "@/lib/assetSearch";
+import { createFallbackPageContent } from "@/lib/generateFallback";
 import { enrichPageWithImages } from "@/lib/image";
-import { enrichInteractiveContent } from "@/lib/pagePostProcess";
+import { normalizePageContent, enrichInteractiveContent } from "@/lib/pagePostProcess";
+import { repairGeneratedPage, scoreGeneratedPage, type PageQualityReport } from "@/lib/pageQuality";
 import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
@@ -16,6 +18,20 @@ type GenerateParams = {
   templateId?: string;
   forceFallback?: boolean;
 };
+
+type ResponseQualityMeta = {
+  score: number;
+  passed: boolean;
+  issues: Array<{ code: string; severity: "info" | "warning" | "error"; message: string }>;
+};
+
+function qualityMeta(report: PageQualityReport): ResponseQualityMeta {
+  return {
+    score: report.score,
+    passed: report.passed,
+    issues: report.issues.slice(0, 8),
+  };
+}
 
 const pageTypes: PageType[] = ["personal_profile", "product_service", "local_business", "event_signup", "course_sales"];
 const styles: ThemeStyle[] = ["minimal", "business", "elegant", "tech", "youthful"];
@@ -135,6 +151,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const template = getTemplateById(validation.data.templateId) ?? undefined;
+    let quality = scoreGeneratedPage(enriched, template);
+
+    if (quality.score < 75) {
+      enriched = repairGeneratedPage(enriched, quality, template);
+      warnings.push("已使用稳定修复模式生成，可继续编辑。");
+      quality = scoreGeneratedPage(enriched, template);
+    }
+
+    if (quality.score < 55) {
+      const fallbackSource = template ? "template_fallback" : "mock_fallback";
+      enriched = normalizePageContent(createFallbackPageContent(validation.data, fallbackSource), validation.data);
+      quality = scoreGeneratedPage(enriched, template);
+      warnings.push("生成结果质量偏低，已切换稳定模板生成。");
+    }
+
     return NextResponse.json({
       success: true,
       data: enriched,
@@ -142,6 +174,7 @@ export async function POST(request: NextRequest) {
         provider: generated.meta.provider,
         providerTried: generated.meta.providerTried,
         warnings,
+        quality: qualityMeta(quality),
       },
     });
   } catch (error) {

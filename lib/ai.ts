@@ -130,7 +130,7 @@ PageContent 字段:
 - pageDescription: string   一句话概括(用于 SEO)
 - pageType: personal_profile | product_service | local_business | event_signup | course_sales
 - layoutPreset: string      必须从下方预设列表中选一个 id
-- backgroundMode: plain | soft_gradient | dark_manifesto | paper_collage | particle_flow
+- backgroundMode: plain | soft_gradient | dark_manifesto | paper_collage | particle_flow | image_fullscreen
                             必须与 layoutPreset 对应(见选择规则)
 - theme: {
     style: minimal | business | elegant | tech | youthful,
@@ -168,6 +168,7 @@ ${presetsForPrompt()}
 - editorial_collage → backgroundMode="paper_collage"
 - dynamic_visual → backgroundMode="particle_flow"
 - 基础预设 → backgroundMode="plain" 或 "soft_gradient"
+- full_image_brand → backgroundMode="image_fullscreen"
 
 ════════════════════════════════
 ▌全局视觉禁令（最高优先级）
@@ -186,14 +187,15 @@ ${presetsForPrompt()}
 所有模块继承:{ type, title?, description?, visible?, id?, design?: { bg?: string, spacing?: string } }
 
 ▸ hero { type: "hero", title, subtitle, buttonText, buttonAction, image?, secondaryButtonText?,
-        layout?: "center" | "split" | "visual" | "manifesto" | "collage" | "immersive",
+        layout?: "center" | "split" | "visual" | "manifesto" | "collage" | "immersive" | "fullscreen_image",
         badge?: string, kicker?: string,
         stats?: [{ label, value }], visualHint?: string,
         mediaType?: "none" | "image" | "abstract" | "canvas",
-        mediaPrompt?: string, mediaPosition?: "left" | "right" | "background" | "center" }
+        mediaUrl?: string, mediaPrompt?: string, mediaPosition?: "left" | "right" | "background" | "center",
+        overlay?: "dark" | "light" | "gradient", navStyle?: "overlay" | "sticky" | "plain" }
 ▸ features { type: "features", title, subtitle?, items: [{ title, description, icon? }],
-           layout?: "grid" | "cards" | "list" | "numbered" | "collage" | "masonry",
-           highlightIndex?: number }
+           layout?: "grid" | "cards" | "list" | "numbered" | "collage" | "masonry" | "image_grid" | "product_grid",
+           highlightIndex?: number, itemImageUrls?: string[] }
 ▸ pain_points { type: "pain_points", title, description?, items: [{ title, description }] }
 ▸ solution { type: "solution", title, description, items: [{ title, description }] }
 ▸ process { type: "process", title, description?, steps: [{ title, description }] }
@@ -217,7 +219,10 @@ ${presetsForPrompt()}
 ▸ timeline { type: "timeline", title, description?,
        items: [{ time?, title, description? }] }
 ▸ gallery { type: "gallery", title, description?,
-       items: [{ title, description?, imageUrl?, tag? }] }
+       layout?: "grid" | "masonry" | "editorial" | "full_bleed_grid",
+       items: [{ title, description?, imageUrl?, tag?, category? }] }
+
+▸ navigation { type: "top" | "side" | "hybrid", items: [{ id, label, targetSectionId?, icon? }] }
 
 ════════════════════════════════
 ▌交互内容强制规则

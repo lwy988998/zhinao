@@ -26,13 +26,13 @@ export type AssetSource = {
 
 // ── Layout variants ──
 
-export type HeroLayout = "center" | "split" | "visual" | "manifesto" | "collage" | "immersive";
-export type FeaturesLayout = "grid" | "cards" | "list" | "numbered" | "collage" | "masonry";
+export type HeroLayout = "center" | "split" | "visual" | "manifesto" | "collage" | "immersive" | "fullscreen_image";
+export type FeaturesLayout = "grid" | "cards" | "list" | "numbered" | "collage" | "masonry" | "image_grid" | "product_grid";
 export type TestimonialsLayout = "cards" | "quote" | "avatars" | "editorial";
 export type CTALayout = "banner" | "panel" | "dark" | "minimal";
 export type PricingLayout = "cards" | "table";
 
-export type BackgroundMode = "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
+export type BackgroundMode = "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow" | "image_fullscreen";
 export type AppMode = "landing" | "app_preview" | "dashboard" | "knowledge_base" | "portfolio_app";
 export type InteractionMode = "static" | "interactive_light" | "interactive_showcase" | "interactive_demo";
 
@@ -134,6 +134,8 @@ export interface HeroSection extends BaseSection {
   mediaPrompt?: string;
   mediaPosition?: "left" | "right" | "background" | "center";
   mediaFit?: "cover" | "contain";
+  overlay?: "dark" | "light" | "gradient";
+  navStyle?: "overlay" | "sticky" | "plain";
   // Interaction support
   interactionType?: "none" | "tabs" | "carousel" | "modal" | "sticky" | "copy_action";
   interactiveItems?: InteractiveItem[];
@@ -218,7 +220,8 @@ export interface GallerySection extends BaseSection {
   type: "gallery";
   title: string;
   description?: string;
-  items: Array<{ title: string; description?: string; imageUrl?: string; tag?: string }>;
+  layout?: "grid" | "masonry" | "editorial" | "full_bleed_grid";
+  items: Array<{ title: string; description?: string; imageUrl?: string; tag?: string; category?: string }>;
 }
 
 export interface PainPointsSection extends BaseSection {
@@ -357,7 +360,7 @@ export interface PageContent {
   /** Selected interaction preset id — drives interactivity defaults */
   interactionPreset?: string;
   /** Background mode — visual background style for the entire page */
-  backgroundMode?: "plain" | "soft_gradient" | "dark_manifesto" | "paper_collage" | "particle_flow";
+  backgroundMode?: BackgroundMode;
   /** Interaction mode — overall interaction intensity */
   interactionMode?: "static" | "interactive_light" | "interactive_showcase" | "interactive_demo";
   /** App-style page mode */

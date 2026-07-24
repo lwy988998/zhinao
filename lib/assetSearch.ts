@@ -59,23 +59,32 @@ export async function findPageImages(params: FindPageImagesParams): Promise<Foun
     ? `${template.style} ${template.backgroundMode} ${template.primaryColor} design`
     : "";
 
+  const isFullImageBrand = template?.id === "full_image_brand";
+  const industryQuery = uniqueStrings([params.pageTitle.slice(0, 30), hints[0], pageTypeHints[params.pageType]]).join(" ");
+
   const baseQuery = uniqueStrings([
     params.pageTitle.slice(0, 30),
     hints.slice(0, 3).join(" "),
     styleHints,
   ]).join(" ");
 
-  const queries = uniqueStrings([
-    `${baseQuery} high quality hero no logo no watermark no brand`,
-    `${hints.slice(1, 5).join(" ")} gallery reference no logo`,
-    `${hints.slice(0, 3).join(" ")} ${styleHints} no logo no brand`,
-  ]);
+  const queries = isFullImageBrand
+    ? uniqueStrings([
+        `${industryQuery} luxury brand photography high quality no logo no watermark no brand`,
+        `${industryQuery} product still life refined material detail no logo no watermark`,
+        `${params.pageTitle.slice(0, 30)} 产品系列 应用场景 材质工艺 ${hints.slice(0, 4).join(" ")} editorial photography no logo`,
+      ])
+    : uniqueStrings([
+        `${baseQuery} high quality hero no logo no watermark no brand`,
+        `${hints.slice(1, 5).join(" ")} gallery reference no logo`,
+        `${hints.slice(0, 3).join(" ")} ${styleHints} no logo no brand`,
+      ]);
 
   try {
     const [heroResults, galleryResults, styleResults] = await Promise.all([
       searchWebAssets({ query: queries[0], count: 6, type: "image" }),
-      searchWebAssets({ query: queries[1] ?? queries[0], count: 8, type: "image" }),
-      searchWebAssets({ query: queries[2] ?? queries[0], count: 4, type: "image" }),
+      searchWebAssets({ query: isFullImageBrand ? queries[2] ?? queries[0] : queries[1] ?? queries[0], count: isFullImageBrand ? 10 : 8, type: "image" }),
+      searchWebAssets({ query: isFullImageBrand ? queries[1] ?? queries[0] : queries[2] ?? queries[0], count: 4, type: "image" }),
     ]);
 
     const heroUrls = pickImageUrls(heroResults);
@@ -87,9 +96,11 @@ export async function findPageImages(params: FindPageImagesParams): Promise<Foun
       ...styleResults.map((asset, index) => toSource(asset, "icon", index)),
     ].slice(0, 18);
 
-    const inspirationSummary = template
-      ? `模板「${template.name}」搜图方向: ${template.imageSearchHints.slice(0, 4).join("、")}`
-      : `搜索方向: ${hints.slice(0, 4).join("、")}`;
+    const inspirationSummary = isFullImageBrand
+      ? `模板「${template.name}」搜图方向: Hero 优先 luxury brand photography / product still life；Gallery 覆盖产品系列、应用场景、材质工艺。`
+      : template
+        ? `模板「${template.name}」搜图方向: ${template.imageSearchHints.slice(0, 4).join("、")}`
+        : `搜索方向: ${hints.slice(0, 4).join("、")}`;
 
     console.log(`[asset-search] template=${params.templateId ?? "none"} hero=${heroUrls.length} gallery=${galleryUrls.length} icon=${iconStyleUrls.length}`);
 

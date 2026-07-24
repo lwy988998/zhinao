@@ -10,9 +10,21 @@ import { Selector } from "@/components/ui/Selector";
 import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageContent, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
+type QualityMeta = {
+  score: number;
+  passed: boolean;
+  issues?: Array<{ code: string; severity: "info" | "warning" | "error"; message: string }>;
+};
+
+type GenerateMeta = {
+  provider?: string;
+  warnings?: string[];
+  quality?: QualityMeta;
+};
+
 type GenerateResponse =
-  | { success: true; data: PageContent; meta?: { provider?: string; warnings?: string[] } }
-  | { success: false; error: string; data?: PageContent; meta?: { provider?: string; warnings?: string[] } };
+  | { success: true; data: PageContent; meta?: GenerateMeta }
+  | { success: false; error: string; data?: PageContent; meta?: GenerateMeta };
 
 const loadingSteps = [
   "正在理解你的需求...",
@@ -253,8 +265,13 @@ function GenerateForm() {
       const payload = (await response.json()) as GenerateResponse;
       if ("data" in payload && payload.data) {
         window.localStorage.setItem("currentPageContent", JSON.stringify(payload.data));
-        if (payload.meta?.warnings?.length) {
-          window.localStorage.setItem("generationWarnings", JSON.stringify(payload.meta.warnings));
+        const warnings = [...(payload.meta?.warnings ?? [])];
+        if (payload.meta?.quality && payload.meta.quality.score < 75) {
+          warnings.push("已使用稳定修复模式生成，可继续编辑。");
+          window.localStorage.setItem("generationQuality", JSON.stringify({ score: payload.meta.quality.score, passed: payload.meta.quality.passed }));
+        }
+        if (warnings.length) {
+          window.localStorage.setItem("generationWarnings", JSON.stringify(Array.from(new Set(warnings))));
         }
         router.push("/editor");
         return;

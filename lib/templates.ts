@@ -10,7 +10,8 @@ export type TemplatePreviewStyle =
   | "brand_warm"
   | "mobile_poster"
   | "editorial_collage"
-  | "dynamic_visual";
+  | "dynamic_visual"
+  | "full_image_brand";
 
 export type TemplateHeroFramework = {
   layout: HeroLayout;
@@ -113,9 +114,11 @@ function previewSection(type: string, template: TemplateSeed): PageSection | nul
       badge: template.tagline,
       kicker: template.category.toUpperCase(),
       visualHint: template.heroFramework.visualDirection,
-      mediaType: "abstract",
+      mediaType: template.heroFramework.layout === "fullscreen_image" ? "image" : "abstract",
       mediaPrompt: template.heroFramework.mediaStrategy,
-      mediaPosition: template.heroFramework.layout === "immersive" ? "background" : template.heroFramework.layout === "manifesto" ? "background" : "right",
+      mediaPosition: template.heroFramework.layout === "immersive" || template.heroFramework.layout === "manifesto" || template.heroFramework.layout === "fullscreen_image" ? "background" : "right",
+      overlay: template.heroFramework.layout === "fullscreen_image" ? "gradient" : undefined,
+      navStyle: template.heroFramework.layout === "fullscreen_image" ? "overlay" : undefined,
       interactionType: template.interactionMode === "interactive_demo" ? "tabs" : template.interactionMode === "interactive_showcase" ? "carousel" : "none",
       interactiveItems: [
         { title: "核心价值", description: template.tagline, status: "active" },
@@ -161,7 +164,8 @@ function previewSection(type: string, template: TemplateSeed): PageSection | nul
       visible: true,
       title: sectionTitle(type),
       description: template.sectionFrameworks.find((item) => item.sectionType === type)?.purpose ?? "展示作品或素材方向。",
-      items: Array.from({ length: 6 }, (_, itemIndex) => ({ title: `视觉 ${itemIndex + 1}`, description: template.imageSearchHints[itemIndex % template.imageSearchHints.length], tag: itemIndex === 0 ? "Hero" : "参考" })),
+      layout: template.id === "full_image_brand" ? "full_bleed_grid" : undefined,
+      items: Array.from({ length: 6 }, (_, itemIndex) => ({ title: template.id === "full_image_brand" ? ["产品系列", "应用场景", "材质细节", "工艺流程", "空间氛围", "品牌视觉"][itemIndex] : `视觉 ${itemIndex + 1}`, description: template.imageSearchHints[itemIndex % template.imageSearchHints.length], tag: itemIndex === 0 ? "Hero" : "参考", category: template.id === "full_image_brand" ? ["产品系列", "应用场景", "材质工艺"][itemIndex % 3] : undefined })),
     };
   }
 
@@ -318,9 +322,21 @@ function previewSection(type: string, template: TemplateSeed): PageSection | nul
 
 function buildPreviewData(template: TemplateSeed): PageContent {
   const sections = template.recommendedSections.map((type) => previewSection(type, template)).filter((section): section is PageSection => Boolean(section));
-  const navigation = template.appMode === "dashboard" || template.appMode === "app_preview"
-    ? { type: "hybrid" as const, items: sections.slice(0, 5).map((section) => ({ id: section.id ?? section.type, label: sectionTitle(section.type), targetSectionId: section.id ?? section.type })) }
-    : undefined;
+  const navigation = template.id === "full_image_brand"
+    ? {
+        type: "top" as const,
+        items: [
+          { id: "nav-brand-story", label: "品牌故事", targetSectionId: "brand-story" },
+          { id: "nav-design", label: "设计理念", targetSectionId: "design-philosophy" },
+          { id: "nav-products", label: "产品系列", targetSectionId: "product-series" },
+          { id: "nav-craft", label: "材质工艺", targetSectionId: "craft" },
+          { id: "nav-scenes", label: "应用场景", targetSectionId: "gallery" },
+          { id: "nav-contact", label: "联系我们", targetSectionId: "section-contact" },
+        ],
+      }
+    : template.appMode === "dashboard" || template.appMode === "app_preview"
+      ? { type: "hybrid" as const, items: sections.slice(0, 5).map((section) => ({ id: section.id ?? section.type, label: sectionTitle(section.type), targetSectionId: section.id ?? section.type })) }
+      : undefined;
 
   return {
     id: `preview-${template.id}`,
@@ -685,7 +701,56 @@ const templateSeeds: TemplateSeed[] = [
     previewHeroSubtitle: "以项目、纸张、编号和策展文字组织作品，让页面像一本可浏览的作品杂志。",
   },
   // ════════════════════════════════════════════════════════════
-  // 8. dashboard_app_demo — 独有: particle_flow + sidebar + purple
+  // 8. full_image_brand — 独有: image_fullscreen + full bleed photography
+  // ════════════════════════════════════════════════════════════
+  {
+    id: "full_image_brand",
+    name: "全图品牌官网",
+    tagline: "全屏大图、品牌故事和产品系列陈列",
+    description: "图片驱动的高级品牌官网模板，适合包装、香氛、餐厅、民宿、摄影和生活方式品牌。",
+    category: "product",
+    categories: ["product", "business", "portfolio", "featured"],
+    previewStyle: "full_image_brand",
+    pageType: "product_service",
+    style: "elegant",
+    primaryColor: "black_gold",
+    visualMode: true,
+    layoutPreset: "full_image_brand",
+    backgroundMode: "image_fullscreen",
+    interactionMode: "interactive_showcase",
+    recommendedSections: ["hero", "solution", "features", "gallery", "process", "contact", "cta"],
+    requiredSections: ["hero", "gallery", "contact", "cta"],
+    forbiddenSections: ["dashboard", "pricing"],
+    heroFramework: {
+      layout: "fullscreen_image",
+      tone: "quiet luxury",
+      visualDirection: "full bleed product/lifestyle photography, warm natural light, refined material detail, no logo, no watermark",
+      titleStyle: "oversized elegant Chinese title",
+      subtitleStyle: "restrained brand narrative",
+      ctaStyle: "understated rectangular button",
+      mediaStrategy: "background image",
+    },
+    sectionFrameworks: [
+      { sectionType: "solution", purpose: "品牌故事与设计理念", layoutHint: "editorial text with generous whitespace", contentRules: ["必须写品牌故事", "必须写设计理念", "文字克制，像品牌官网"], interactionHint: "anchor scroll", imageHint: "warm brand lifestyle photo" },
+      { sectionType: "features", purpose: "产品系列与材质工艺说明", layoutHint: "product_grid / image_grid，图片和短文并重", contentRules: ["至少 3 个产品系列", "必须体现材质/工艺", "不要普通功能卡片"], interactionHint: "hover reveal", imageHint: "minimal product still life" },
+      { sectionType: "gallery", purpose: "应用场景大图网格", layoutHint: "full_bleed_grid 三列大图，hover 显示文字", contentRules: ["必须包含产品系列、材质工艺、应用场景", "每个图注短而高级"], interactionHint: "modal lightbox", imageHint: "restaurant interior atmosphere / luxury packaging photography" },
+      { sectionType: "process", purpose: "材质、工艺和制作流程", layoutHint: "quiet editorial process", contentRules: ["用 3-4 步说明从材料到成品", "不要流程软件感"], interactionHint: "anchor scroll" },
+      { sectionType: "contact", purpose: "联系/预约 CTA", layoutHint: "minimal contact block", contentRules: ["预约、合作或到店联系方式清晰", "CTA 克制高级"], interactionHint: "copy/contact" },
+    ],
+    visualRules: ["首屏使用整屏图片背景", "导航覆盖在图片上方", "文字压在图片左侧或中左", "后续区块以图片网格为主", "不要普通卡片堆叠", "CTA 克制高级", "浅色纸感背景承接首屏"],
+    copywritingRules: ["像高端品牌官网", "句子短、留白多", "必须出现品牌故事、设计理念、产品系列、材质工艺、应用场景、联系我们", "不复制任何第三方文案或品牌名", "少用促销词"],
+    interactionRules: ["navigation 必须存在且指向锚点", "gallery 必须 full_bleed_grid 并可打开详情", "Hero 下箭头滚动到下一节", "图片失败时显示高级 fallback", "CTA 使用矩形按钮"],
+    imageSearchHints: ["luxury packaging photography", "perfume product photography", "warm brand lifestyle photo", "restaurant interior atmosphere", "artisan packaging design", "minimal product still life"],
+    iconSearchHints: ["minimal brand icon", "material craft icon", "packaging line icon"],
+    promptFramework: "【全图品牌官网专属】你不是在生成普通转化页！必须：① layoutPreset='full_image_brand'，backgroundMode='image_fullscreen'；② Hero 使用 fullscreen_image，整屏图片背景，导航覆盖在图片上方，文字压在图片左侧或中左；③ hero.mediaType='image'，mediaPosition='background'；④ 必须生成 navigation，锚点为品牌故事、设计理念、产品系列、材质工艺、应用场景、联系我们；⑤ 必须生成 gallery，layout='full_bleed_grid'；⑥ 后续区块以图片网格和大留白为主，不要普通卡片堆叠；⑦ 必须写品牌故事、设计理念、产品系列、材质工艺、应用场景、联系我们；⑧ CTA 克制高级，矩形按钮；⑨ 不复制任何第三方代码、图片、文案、Logo 或品牌素材。",
+    negativePromptRules: ["不要普通 SaaS 卡片堆叠", "不要营销活动页", "不要 dashboard/app_preview", "不要复制第三方品牌名、文案、Logo 或图片", "不要全站套同一张背景图", "不要圆滚滚 CTA"],
+    qualityChecklist: [...defaultChecklist, "Hero 是否 fullscreen_image", "导航是否 overlay 且锚点可滚动", "Gallery 是否 full_bleed_grid", "是否包含品牌故事/设计理念/产品系列/材质工艺/应用场景/联系我们", "CTA 是否克制矩形"],
+    previewTitle: "澄境包装研究所",
+    previewDescription: "高级包装、香氛、餐厅或生活方式品牌官网。",
+    previewHeroSubtitle: "以材质、光线和留白呈现产品系列，让品牌故事从第一张大图开始。",
+  },
+  // ════════════════════════════════════════════════════════════
+  // 9. dashboard_app_demo — 独有: particle_flow + sidebar + purple
   // ════════════════════════════════════════════════════════════
   {
     id: "dashboard_app_demo",

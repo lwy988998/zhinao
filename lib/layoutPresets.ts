@@ -276,6 +276,35 @@ const dynamicVisual: LayoutPreset = {
 - 文案现代、数据感、未来感`,
 };
 
+// ── ADVANCED Preset D: Full Image Brand ──
+
+const fullImageBrand: LayoutPreset = {
+  id: "full_image_brand",
+  name: "全图品牌官网",
+  suitablePageTypes: ["product_service", "local_business", "personal_profile"],
+  heroLayout: "fullscreen_image",
+  sectionRhythm: "editorial",
+  visualDensity: "rich",
+  preferredSections: [
+    "hero", "solution", "features", "gallery", "process", "contact", "cta",
+  ],
+  requiredSections: ["gallery", "contact"],
+  backgroundStyle: "white_only",
+  backgroundMode: "image_fullscreen",
+  cardStyle: "subtle",
+  ctaStyle: "minimal",
+  testimonyStyle: "editorial",
+  featureStyle: "product_grid",
+  promptGuidance: `打造一个高级、克制、图片驱动的品牌官网：
+- hero.layout 必须使用 "fullscreen_image"，首屏整屏大图背景，文字压在左侧或中左
+- backgroundMode 必须为 "image_fullscreen"，但全站背景保持浅色纸感，不要全站套一张图
+- 必须有 navigation，顶部 overlay/sticky，锚点指向品牌故事、设计理念、产品系列、材质工艺、应用场景、联系我们
+- gallery.layout 必须为 "full_bleed_grid"，以三列大图网格展示产品系列和应用场景
+- features.layout 使用 "product_grid" 或 "image_grid"，配合 itemImageUrls 呈现产品/工艺
+- 不要普通卡片堆叠，section 以大图、留白、细分割线和简短文字为主
+- CTA 克制高级，矩形按钮，不要圆滚滚和强促销语气`,
+};
+
 // ── Master preset map ──
 
 export const layoutPresets: Record<string, LayoutPreset> = {
@@ -287,6 +316,7 @@ export const layoutPresets: Record<string, LayoutPreset> = {
   manifesto_dark: manifestoDark,
   editorial_collage: editorialCollage,
   dynamic_visual: dynamicVisual,
+  full_image_brand: fullImageBrand,
 };
 
 /** Returns all presets, sorted by id */
