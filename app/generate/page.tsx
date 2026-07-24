@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LoadingSteps } from "@/components/ui/LoadingSteps";
 import { Selector } from "@/components/ui/Selector";
+import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageContent, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GenerateResponse =
@@ -116,15 +117,17 @@ function GenerateForm() {
     return q ? decodeURIComponent(q) : null;
   }, [searchParams]);
 
-  const queryPageType = validatePageType(searchParams?.get("pageType") ?? null);
-  const queryStyle = validateStyle(searchParams?.get("style") ?? null);
-  const queryColor = validateColor(searchParams?.get("primaryColor") ?? null);
+  const queryTemplateId = searchParams?.get("templateId") ?? null;
+  const selectedTemplate = useMemo(() => getTemplateById(queryTemplateId), [queryTemplateId]);
+  const queryPageType = selectedTemplate?.pageType ?? validatePageType(searchParams?.get("pageType") ?? null);
+  const queryStyle = selectedTemplate?.style ?? validateStyle(searchParams?.get("style") ?? null);
+  const queryColor = selectedTemplate?.primaryColor ?? validateColor(searchParams?.get("primaryColor") ?? null);
   const queryContact = validateContact(searchParams?.get("contactAction") ?? null);
-  const queryVisual = (searchParams?.get("visualMode") ?? null) === "1";
+  const queryVisual = selectedTemplate?.visualMode ?? ((searchParams?.get("visualMode") ?? null) === "1");
 
   const hasQueryParams = useMemo(
-    () => Boolean(queryPrompt ?? searchParams?.get("pageType") ?? searchParams?.get("style") ?? searchParams?.get("primaryColor") ?? searchParams?.get("contactAction")),
-    [queryPrompt, searchParams],
+    () => Boolean(queryPrompt ?? selectedTemplate ?? searchParams?.get("pageType") ?? searchParams?.get("style") ?? searchParams?.get("primaryColor") ?? searchParams?.get("contactAction")),
+    [queryPrompt, searchParams, selectedTemplate],
   );
 
   // ── State ──
@@ -166,11 +169,12 @@ function GenerateForm() {
     params.set("primaryColor", primaryColor);
     params.set("contactAction", contactAction);
     if (queryVisual) params.set("visualMode", "1");
+    if (selectedTemplate) params.set("templateId", selectedTemplate.id);
 
     const qs = params.toString();
     const path = "/generate" + (qs ? `?${qs}` : "");
     router.replace(path);
-  }, [userInput, pageType, style, primaryColor, contactAction, queryVisual, router]);
+  }, [userInput, pageType, style, primaryColor, contactAction, queryVisual, selectedTemplate, router]);
 
   // Sync URL on state change, debounced
   useEffect(() => {
@@ -208,9 +212,10 @@ function GenerateForm() {
       COLOR_LABELS[primaryColor],
       CONTACT_LABELS[contactAction],
     ];
+    if (selectedTemplate) parts.push(`模板：${selectedTemplate.name}`);
     if (queryVisual) parts.push("视觉增强");
     return parts.join(" · ");
-  }, [pageType, style, primaryColor, contactAction, queryVisual]);
+  }, [pageType, style, primaryColor, contactAction, queryVisual, selectedTemplate]);
 
   // ── Validation ──
   function validate() {
@@ -242,6 +247,7 @@ function GenerateForm() {
           userInput: userInput.trim(),
           pageType, style, primaryColor, contactAction,
           visualMode: queryVisual,
+          templateId: selectedTemplate?.id,
         }),
       });
       const payload = (await response.json()) as GenerateResponse;
@@ -281,8 +287,15 @@ function GenerateForm() {
           </p>
         </div>
 
+        {selectedTemplate ? (
+          <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <span className="text-base">▦</span>
+            <span>已选择模板：{selectedTemplate.name}</span>
+          </div>
+        ) : null}
+
         {/* Source hint */}
-        {hasQueryParams ? (
+        {hasQueryParams && !selectedTemplate ? (
           <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
             <span className="text-base">🏠</span>
             <span>已根据首页选择预填生成配置，你可以继续修改。</span>
@@ -310,7 +323,7 @@ function GenerateForm() {
               value={userInput}
               onChange={setUserInput}
               error={inputError}
-              placeholder="例如：我是一个瑜伽老师，想做一个个人介绍页，用来展示课程、价格、学员评价和微信二维码，风格温柔高级。"
+              placeholder={selectedTemplate?.promptGuidance ?? "例如：我是一个瑜伽老师，想做一个个人介绍页，用来展示课程、价格、学员评价和微信二维码，风格温柔高级。"}
             />
             {highlightPrompt ? (
               <p className="mt-1 text-xs text-slate-400">📝 已从首页预填创作需求</p>
@@ -351,6 +364,11 @@ function GenerateForm() {
   );
 }
 
+function GenerateFormShell() {
+  const searchParams = useSearchParams();
+  return <GenerateForm key={searchParams?.toString() ?? ""} />;
+}
+
 export default function GeneratePage() {
   return (
     <Suspense
@@ -362,7 +380,7 @@ export default function GeneratePage() {
         </main>
       }
     >
-      <GenerateForm />
+      <GenerateFormShell />
     </Suspense>
   );
 }

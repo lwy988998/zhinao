@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePageContent } from "@/lib/ai";
+import { applyFoundImages, findPageImages } from "@/lib/assetSearch";
 import { enrichPageWithImages } from "@/lib/image";
 import { enrichInteractiveContent } from "@/lib/pagePostProcess";
+import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GenerateParams = {
@@ -11,6 +13,7 @@ type GenerateParams = {
   primaryColor: PrimaryColor;
   contactAction: ContactActionType;
   visualMode: boolean;
+  templateId?: string;
 };
 
 const pageTypes: PageType[] = ["personal_profile", "product_service", "local_business", "event_signup", "course_sales"];
@@ -55,15 +58,25 @@ function validateRequestBody(body: unknown): { success: true; data: GeneratePara
     return { success: false, error: "目标动作不合法" };
   }
 
+  const templateId = typeof body.templateId === "string" && body.templateId.trim()
+    ? body.templateId.trim()
+    : undefined;
+  const template = getTemplateById(templateId);
+
+  if (templateId && !template) {
+    return { success: false, error: "模板不存在" };
+  }
+
   return {
     success: true,
     data: {
       userInput: body.userInput.trim(),
-      pageType: body.pageType,
-      style: body.style,
-      primaryColor: body.primaryColor,
+      pageType: template?.pageType ?? body.pageType,
+      style: template?.style ?? body.style,
+      primaryColor: template?.primaryColor ?? body.primaryColor,
       contactAction: body.contactAction,
-      visualMode: body.visualMode === true,
+      visualMode: template?.visualMode ?? body.visualMode === true,
+      templateId,
     },
   };
 }
@@ -89,8 +102,28 @@ export async function POST(request: NextRequest) {
     // Post-process: ensure interactive content is never empty
     const withContent = enrichInteractiveContent(data);
 
-    // Enrich with AI-generated images (fast-fail: 25s per image, skips on error)
-    const enriched = await enrichPageWithImages(withContent);
+    let enriched = withContent;
+
+    if (validation.data.visualMode || validation.data.templateId) {
+      try {
+        const template = getTemplateById(validation.data.templateId);
+        const found = await findPageImages({
+          pageTitle: enriched.pageTitle,
+          pageType: enriched.pageType,
+          templateId: validation.data.templateId,
+          imageSearchHints: template?.imageSearchHints,
+        });
+        enriched = applyFoundImages(enriched, found);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`[asset-search] non-fatal=${message.slice(0, 120)}`);
+      }
+    }
+
+    // Enrich with AI-generated images when no searched hero image is available.
+    if (!enriched.assets?.heroImageUrl) {
+      enriched = await enrichPageWithImages(enriched);
+    }
 
     return NextResponse.json({ success: true, data: enriched });
   } catch (error) {

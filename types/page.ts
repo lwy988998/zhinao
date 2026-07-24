@@ -376,10 +376,18 @@ export interface PageContent {
       value?: string;
     }>;
   }>;
-  /** AI-generated visual assets */
+  /** AI-generated or searched visual assets */
   assets?: {
     heroImageUrl?: string;
     collageImageUrls?: string[];
     coverImageUrl?: string;
+    sources?: Array<{
+      title: string;
+      url: string;
+      imageUrl?: string;
+      source?: string;
+      snippet?: string;
+      licenseHint?: string;
+    }>;
   };
 }

@@ -1,6 +1,7 @@
 import { mockPageContent } from "@/data/mockPage";
 import { isValidPageContent } from "@/lib/pageValidation";
 import { presetsForPrompt } from "@/lib/layoutPresets";
+import { getTemplateById } from "@/lib/templates";
 import type { ContactActionType, PageContent, PageSection, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 type GeneratePageContentParams = {
@@ -10,6 +11,7 @@ type GeneratePageContentParams = {
   primaryColor: PrimaryColor;
   contactAction: ContactActionType;
   visualMode?: boolean;
+  templateId?: string;
 };
 
 type ChatCompletionResponse = {
@@ -368,6 +370,24 @@ export function extractJSON(text: string) {
 }
 
 function buildUserPrompt(params: GeneratePageContentParams) {
+  const template = getTemplateById(params.templateId);
+  const templateBlock = template
+    ? `
+
+⚠️ 已选择模板：${template.name}
+模板说明：${template.description}
+模板风格：${template.promptGuidance}
+必须优先使用：
+- layoutPreset="${template.layoutPreset}"
+- backgroundMode="${template.backgroundMode}"
+- pageType="${template.pageType}"
+- style="${template.style}"
+- primaryColor="${template.primaryColor}"
+推荐模块顺序：${template.recommendedSections.join(" → ")}
+图片/图标搜索线索：${template.imageSearchHints.join("；")}
+请根据用户需求改写文案和模块内容，但不要偏离模板的布局结构、视觉语气和行业适配。`
+    : "";
+
   const visualBlock = params.visualMode
     ? `
 
@@ -388,12 +408,13 @@ function buildUserPrompt(params: GeneratePageContentParams) {
 页面类型：${params.pageType}
 视觉风格：${params.style}
 主色调：${params.primaryColor}
-目标动作：${params.contactAction}${visualBlock}
+目标动作：${params.contactAction}${templateBlock}${visualBlock}
 
 重要要求：
-- 根据 pageType 选择对应的 layoutPreset（必须输出该字段）
-- 严格按照选中 preset 的 promptGuidance 生成内容
-- 按照 preset 的 preferredSections 安排模块顺序
+- 根据 pageType/templateId 选择对应的 layoutPreset（必须输出该字段）
+- 如果提供 templateId，优先使用模板指定的 layoutPreset、backgroundMode 和 recommendedSections
+- 严格按照选中 preset 或模板的 promptGuidance 生成内容
+- 按照 preset/template 的 preferredSections 或 recommendedSections 安排模块顺序
 - hero 用 preset 指定的 heroLayout
 - testimonials 用 preset 指定的 layout
 - cta 用 preset 指定的 ctaStyle
@@ -475,6 +496,18 @@ export async function generatePageContent(params: GeneratePageContentParams): Pr
       const pageContent = normalizePageContent(parsed);
       // Preserve visualMode in the final output
       if (params.visualMode) pageContent.visualMode = true;
+      const template = getTemplateById(params.templateId);
+      if (template) {
+        pageContent.pageType = template.pageType;
+        pageContent.theme = {
+          ...pageContent.theme,
+          style: template.style,
+          primaryColor: template.primaryColor,
+        };
+        pageContent.layoutPreset = template.layoutPreset;
+        pageContent.backgroundMode = template.backgroundMode as PageContent["backgroundMode"];
+        pageContent.visualMode = template.visualMode || pageContent.visualMode;
+      }
       return pageContent;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));

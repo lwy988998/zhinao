@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { templatePresets } from "@/lib/templates";
 import type { ContactActionType, PageType, PrimaryColor, ThemeStyle } from "@/types/page";
 
 // ── Data ──
@@ -191,6 +192,7 @@ function Sidebar() {
   };
   const items = [
     { icon: "✦", label: "创建", href: "/generate", active: true },
+    { icon: "▦", label: "模板", href: "/templates", active: false },
     { icon: "◇", label: "示例", href: null, active: false, onClick: scrollToExamples },
     { icon: "⬆", label: "发布", href: "/editor", active: false },
     { icon: "⚙", label: "设置", href: null, active: false, onClick: () => showToast("设置功能即将上线") },
@@ -229,7 +231,10 @@ function MobileNav() {
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
       <Link href="/" className="text-lg font-bold tracking-tight text-slate-900">智脑</Link>
-      <Link href="/generate" className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800">创建</Link>
+      <div className="flex items-center gap-2">
+        <Link href="/templates" className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300">模板</Link>
+        <Link href="/generate" className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800">创建</Link>
+      </div>
     </header>
   );
 }
@@ -442,6 +447,26 @@ export default function Home() {
                   {tag.label}
                 </button>
               ))}
+            </div>
+
+            {/* ── Featured templates ── */}
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/75 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">精选模板</p>
+                <Link href="/templates" className="text-xs font-medium text-slate-500 transition hover:text-slate-900">查看全部</Link>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {templatePresets.slice(0, 3).map((template) => (
+                  <Link
+                    key={template.id}
+                    href={`/generate?templateId=${template.id}&visualMode=1`}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:border-slate-300 hover:shadow-sm"
+                  >
+                    <p className="text-sm font-medium text-slate-900">{template.name}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{template.description}</p>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* ── Recent history ── */}

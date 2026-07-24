@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import type { PageContent } from "@/types/page";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { GallerySection, PageContent } from "@/types/page";
 import {
   updatePageField,
   updateThemeStyle,
@@ -145,6 +145,9 @@ export function PageEditor({ initialContent }: Props) {
   const heroIdx = content.sections.findIndex((s) => s.type === "hero");
   const ctaIdx = content.sections.findIndex((s) => s.type === "cta");
   const contactIdx = content.sections.findIndex((s) => s.type === "contact");
+  const gallerySections = content.sections
+    .map((section, index) => ({ section, index }))
+    .filter((entry): entry is { section: GallerySection; index: number } => entry.section.type === "gallery");
 
   const heroSection = heroIdx >= 0 ? (content.sections[heroIdx] as import("@/types/page").HeroSection) : null;
   const ctaSection = ctaIdx >= 0 ? (content.sections[ctaIdx] as import("@/types/page").CTASection) : null;
@@ -153,6 +156,63 @@ export function PageEditor({ initialContent }: Props) {
   const update = useCallback((fn: (c: PageContent) => PageContent) => {
     setContent((prev) => fn(prev));
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("currentPageContent", JSON.stringify(content));
+    } catch {
+      // localStorage unavailable — safe to ignore in preview-only contexts
+    }
+  }, [content]);
+
+  const replaceHeroImage = useCallback((url: string) => {
+    update((current) => {
+      const trimmed = url.trim();
+      const sections = current.sections.map((section) => {
+        if (section.type !== "hero") return section;
+        return {
+          ...section,
+          mediaUrl: trimmed || undefined,
+          mediaType: trimmed ? "image" as const : "none" as const,
+          mediaFit: trimmed ? (section.mediaFit ?? "cover") : section.mediaFit,
+        };
+      });
+      return {
+        ...current,
+        assets: {
+          ...(current.assets ?? {}),
+          heroImageUrl: trimmed || undefined,
+          coverImageUrl: trimmed || current.assets?.collageImageUrls?.[0],
+        },
+        sections,
+      };
+    });
+  }, [update]);
+
+  const replaceGalleryImage = useCallback((sectionIndex: number, itemIndex: number, url: string) => {
+    update((current) => {
+      const trimmed = url.trim();
+      const sections = current.sections.map((section, idx) => {
+        if (idx !== sectionIndex || section.type !== "gallery") return section;
+        return {
+          ...section,
+          items: section.items.map((item, i) => i === itemIndex ? { ...item, imageUrl: trimmed || undefined } : item),
+        };
+      });
+      const collageImageUrls = sections
+        .filter((section): section is GallerySection => section.type === "gallery")
+        .flatMap((section) => section.items.map((item) => item.imageUrl).filter((item): item is string => Boolean(item)));
+      return {
+        ...current,
+        sections,
+        assets: {
+          ...(current.assets ?? {}),
+          collageImageUrls: collageImageUrls.length ? collageImageUrls : undefined,
+          coverImageUrl: current.assets?.heroImageUrl ?? collageImageUrls[0],
+        },
+      };
+    });
+  }, [update]);
 
   async function handlePublish() {
     setPublishState("publishing");
@@ -412,6 +472,80 @@ export function PageEditor({ initialContent }: Props) {
             </div>
           </Collapsible>
         ) : null}
+
+        {/* Image Edit */}
+        <Collapsible title="🖼️ 图片替换">
+          <div className="space-y-4">
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-medium text-slate-700">Hero 图片 URL</p>
+              {heroSection?.mediaUrl || content.assets?.heroImageUrl ? (
+                <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                  <img src={heroSection?.mediaUrl ?? content.assets?.heroImageUrl} alt="Hero 预览" className="h-28 w-full object-cover" />
+                </div>
+              ) : (
+                <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white text-xs text-slate-400">当前使用占位视觉</div>
+              )}
+              <input
+                type="url"
+                value={heroSection?.mediaUrl ?? content.assets?.heroImageUrl ?? ""}
+                onChange={(event) => replaceHeroImage(event.target.value)}
+                placeholder="https://example.com/hero.jpg"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => replaceHeroImage(heroSection?.mediaUrl ?? content.assets?.heroImageUrl ?? "")}
+                  className="inline-flex h-8 items-center justify-center rounded-full bg-slate-950 px-3 text-xs font-medium text-white transition hover:bg-slate-800"
+                >
+                  替换 Hero 图片
+                </button>
+                <button
+                  type="button"
+                  onClick={() => replaceHeroImage("")}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition hover:border-slate-400"
+                >
+                  清空图片
+                </button>
+              </div>
+            </div>
+
+            {gallerySections.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-slate-700">Gallery 图片</p>
+                {gallerySections.map(({ section, index }) => (
+                  <div key={section.id ?? `gallery-${index}`} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                    <p className="text-xs font-medium text-slate-500">{section.title ?? "作品图库"}</p>
+                    {section.items.map((item, itemIndex) => (
+                      <div key={`${item.title}-${itemIndex}`} className="space-y-1 rounded-lg bg-slate-50 p-2">
+                        <label className="text-[11px] font-medium text-slate-500">{item.title || `图片 ${itemIndex + 1}`}</label>
+                        {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-16 w-full rounded-md object-cover" /> : null}
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={item.imageUrl ?? ""}
+                            onChange={(event) => replaceGalleryImage(index, itemIndex, event.target.value)}
+                            placeholder="https://example.com/gallery.jpg"
+                            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => replaceGalleryImage(index, itemIndex, "")}
+                            className="shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-500 transition hover:text-slate-900"
+                          >
+                            清空
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">当前页面没有 Gallery 模块。</p>
+            )}
+          </div>
+        </Collapsible>
 
         {/* CTA Edit */}
         {ctaSection ? (
