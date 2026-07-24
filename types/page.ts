@@ -11,6 +11,19 @@ export type PrimaryColor = "blue" | "green" | "purple" | "orange" | "black_gold"
 
 export type ContactActionType = "wechat" | "phone" | "form" | "link" | "email";
 
+export type AssetSource = {
+  id?: string;
+  type?: "hero" | "gallery" | "icon" | "cover";
+  title?: string;
+  source?: string;
+  url?: string;
+  imageUrl?: string;
+  licenseHint?: string;
+  provider?: string;
+  createdAt?: string;
+  disabled?: boolean;
+};
+
 // ── Layout variants ──
 
 export type HeroLayout = "center" | "split" | "visual" | "manifesto" | "collage" | "immersive";
@@ -376,18 +389,11 @@ export interface PageContent {
       value?: string;
     }>;
   }>;
-  /** AI-generated or searched visual assets */
+  /** AI-generated, searched, or user-provided visual assets */
   assets?: {
     heroImageUrl?: string;
     collageImageUrls?: string[];
     coverImageUrl?: string;
-    sources?: Array<{
-      title: string;
-      url: string;
-      imageUrl?: string;
-      source?: string;
-      snippet?: string;
-      licenseHint?: string;
-    }>;
+    sources?: AssetSource[];
   };
 }

@@ -1,6 +1,6 @@
 import { getTemplateById } from "@/lib/templates";
 import { searchWebAssets, type SearchAsset } from "@/lib/webSearch";
-import type { GallerySection, PageContent, PageType } from "@/types/page";
+import type { AssetSource, GallerySection, PageContent, PageType } from "@/types/page";
 
 type FindPageImagesParams = {
   pageTitle: string;
@@ -13,7 +13,7 @@ type FoundPageImages = {
   heroImageUrl?: string;
   galleryImageUrls?: string[];
   iconImageUrls?: string[];
-  sources: SearchAsset[];
+  sources: AssetSource[];
 };
 
 const pageTypeHints: Record<PageType, string> = {
@@ -30,6 +30,20 @@ function uniqueStrings(values: Array<string | undefined>): string[] {
 
 function pickImageUrls(results: SearchAsset[]): string[] {
   return uniqueStrings(results.map((asset) => asset.imageUrl ?? asset.url)).filter((url) => /^https?:\/\//i.test(url));
+}
+
+function toSource(asset: SearchAsset, type: AssetSource["type"], index: number): AssetSource {
+  return {
+    id: `${type ?? "asset"}-${index + 1}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    title: asset.title,
+    source: asset.source,
+    url: asset.url,
+    imageUrl: asset.imageUrl ?? asset.url,
+    licenseHint: asset.licenseHint,
+    provider: asset.provider ?? asset.source,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 export async function findPageImages(params: FindPageImagesParams): Promise<FoundPageImages> {
@@ -57,7 +71,11 @@ export async function findPageImages(params: FindPageImagesParams): Promise<Foun
     const heroUrls = pickImageUrls(heroResults);
     const galleryUrls = pickImageUrls(galleryResults);
     const iconUrls = pickImageUrls(iconResults);
-    const sources = [...heroResults, ...galleryResults, ...iconResults].slice(0, 18);
+    const sources = [
+      ...heroResults.map((asset, index) => toSource(asset, index === 0 ? "hero" : "cover", index)),
+      ...galleryResults.map((asset, index) => toSource(asset, "gallery", index)),
+      ...iconResults.map((asset, index) => toSource(asset, "icon", index)),
+    ].slice(0, 18);
 
     return {
       heroImageUrl: heroUrls[0],

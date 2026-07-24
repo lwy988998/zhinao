@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GallerySection, PageContent } from "@/types/page";
+import type { AssetSource, GallerySection, PageContent } from "@/types/page";
 import {
   updatePageField,
   updateThemeStyle,
@@ -141,6 +141,8 @@ export function PageEditor({ initialContent }: Props) {
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copyLabel, setCopyLabel] = useState("复制公开链接");
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const heroIdx = content.sections.findIndex((s) => s.type === "hero");
   const ctaIdx = content.sections.findIndex((s) => s.type === "cta");
@@ -157,6 +159,23 @@ export function PageEditor({ initialContent }: Props) {
     setContent((prev) => fn(prev));
   }, []);
 
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToastMessage(""), 2200);
+  }, []);
+
+  const createUserSource = useCallback((type: AssetSource["type"], imageUrl: string): AssetSource => ({
+    id: `user-${type ?? "asset"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    title: "用户自定义图片",
+    source: "user",
+    url: imageUrl,
+    imageUrl,
+    provider: "user",
+    createdAt: new Date().toISOString(),
+  }), []);
+
   useEffect(() => {
     try {
       localStorage.setItem("currentPageContent", JSON.stringify(content));
@@ -165,7 +184,7 @@ export function PageEditor({ initialContent }: Props) {
     }
   }, [content]);
 
-  const replaceHeroImage = useCallback((url: string) => {
+  const replaceHeroImage = useCallback((url: string, options?: { silent?: boolean; source?: AssetSource }) => {
     update((current) => {
       const trimmed = url.trim();
       const sections = current.sections.map((section) => {
@@ -177,19 +196,24 @@ export function PageEditor({ initialContent }: Props) {
           mediaFit: trimmed ? (section.mediaFit ?? "cover") : section.mediaFit,
         };
       });
+      const nextSources = trimmed && options?.source
+        ? [...(current.assets?.sources ?? []), options.source]
+        : current.assets?.sources;
       return {
         ...current,
         assets: {
           ...(current.assets ?? {}),
           heroImageUrl: trimmed || undefined,
           coverImageUrl: trimmed || current.assets?.collageImageUrls?.[0],
+          sources: nextSources,
         },
         sections,
       };
     });
-  }, [update]);
+    if (!options?.silent) showToast(url.trim() ? "Hero 图片已更新" : "Hero 图片已清空");
+  }, [showToast, update]);
 
-  const replaceGalleryImage = useCallback((sectionIndex: number, itemIndex: number, url: string) => {
+  const replaceGalleryImage = useCallback((sectionIndex: number, itemIndex: number, url: string, options?: { silent?: boolean; source?: AssetSource }) => {
     update((current) => {
       const trimmed = url.trim();
       const sections = current.sections.map((section, idx) => {
@@ -202,6 +226,9 @@ export function PageEditor({ initialContent }: Props) {
       const collageImageUrls = sections
         .filter((section): section is GallerySection => section.type === "gallery")
         .flatMap((section) => section.items.map((item) => item.imageUrl).filter((item): item is string => Boolean(item)));
+      const nextSources = trimmed && options?.source
+        ? [...(current.assets?.sources ?? []), options.source]
+        : current.assets?.sources;
       return {
         ...current,
         sections,
@@ -209,10 +236,75 @@ export function PageEditor({ initialContent }: Props) {
           ...(current.assets ?? {}),
           collageImageUrls: collageImageUrls.length ? collageImageUrls : undefined,
           coverImageUrl: current.assets?.heroImageUrl ?? collageImageUrls[0],
+          sources: nextSources,
         },
       };
     });
-  }, [update]);
+    if (!options?.silent) showToast(url.trim() ? "Gallery 图片已更新" : "Gallery 图片已清空");
+  }, [showToast, update]);
+
+  const applySourceAsHero = useCallback((source: AssetSource) => {
+    const imageUrl = source.imageUrl ?? source.url;
+    if (!imageUrl) {
+      showToast("这条来源没有图片 URL");
+      return;
+    }
+    replaceHeroImage(imageUrl, { silent: true });
+    showToast("已使用该来源图作为 Hero");
+  }, [replaceHeroImage, showToast]);
+
+  const disableSourceImage = useCallback((source: AssetSource) => {
+    const imageUrl = source.imageUrl ?? source.url;
+    update((current) => {
+      const sections = current.sections.map((section) => {
+        if (section.type === "hero" && imageUrl && section.mediaUrl === imageUrl) {
+          return { ...section, mediaUrl: undefined, mediaType: "none" as const };
+        }
+        if (section.type === "gallery" && imageUrl) {
+          return {
+            ...section,
+            items: section.items.map((item) => item.imageUrl === imageUrl ? { ...item, imageUrl: undefined } : item),
+          };
+        }
+        return section;
+      });
+      const collageImageUrls = sections
+        .filter((section): section is GallerySection => section.type === "gallery")
+        .flatMap((section) => section.items.map((item) => item.imageUrl).filter((item): item is string => Boolean(item)));
+      const sources = (current.assets?.sources ?? []).map((item) => {
+        const sameIdentity = source.id && item.id === source.id;
+        const sameImage = imageUrl && (item.imageUrl === imageUrl || item.url === imageUrl);
+        return sameIdentity || sameImage ? { ...item, disabled: true } : item;
+      });
+      const heroImageUrl = current.assets?.heroImageUrl === imageUrl ? undefined : current.assets?.heroImageUrl;
+      return {
+        ...current,
+        sections,
+        assets: {
+          ...(current.assets ?? {}),
+          heroImageUrl,
+          collageImageUrls: collageImageUrls.length ? collageImageUrls : undefined,
+          coverImageUrl: heroImageUrl ?? collageImageUrls[0],
+          sources,
+        },
+      };
+    });
+    showToast("已禁用这张图片");
+  }, [showToast, update]);
+
+  const copyImageUrl = useCallback(async (source: AssetSource) => {
+    const imageUrl = source.imageUrl ?? source.url;
+    if (!imageUrl) {
+      showToast("这条来源没有图片 URL");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(imageUrl);
+      showToast("图片 URL 已复制");
+    } catch {
+      showToast("复制失败，请手动复制");
+    }
+  }, [showToast]);
 
   async function handlePublish() {
     setPublishState("publishing");
@@ -400,6 +492,10 @@ export function PageEditor({ initialContent }: Props) {
           }`}>{saveMessage}</p>
         ) : null}
 
+        {toastMessage ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-950 px-3 py-2 text-xs text-white shadow-sm">{toastMessage}</p>
+        ) : null}
+
         {/* Page Info */}
         <Collapsible title="📄 页面信息" defaultOpen>
           <div className="space-y-3">
@@ -488,14 +584,17 @@ export function PageEditor({ initialContent }: Props) {
               <input
                 type="url"
                 value={heroSection?.mediaUrl ?? content.assets?.heroImageUrl ?? ""}
-                onChange={(event) => replaceHeroImage(event.target.value)}
+                onChange={(event) => replaceHeroImage(event.target.value, { silent: true })}
                 placeholder="https://example.com/hero.jpg"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
               />
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => replaceHeroImage(heroSection?.mediaUrl ?? content.assets?.heroImageUrl ?? "")}
+                  onClick={() => {
+                    const url = heroSection?.mediaUrl ?? content.assets?.heroImageUrl ?? "";
+                    replaceHeroImage(url, { source: url ? createUserSource("hero", url) : undefined });
+                  }}
                   className="inline-flex h-8 items-center justify-center rounded-full bg-slate-950 px-3 text-xs font-medium text-white transition hover:bg-slate-800"
                 >
                   替换 Hero 图片
@@ -524,7 +623,7 @@ export function PageEditor({ initialContent }: Props) {
                           <input
                             type="url"
                             value={item.imageUrl ?? ""}
-                            onChange={(event) => replaceGalleryImage(index, itemIndex, event.target.value)}
+                            onChange={(event) => replaceGalleryImage(index, itemIndex, event.target.value, { silent: true })}
                             placeholder="https://example.com/gallery.jpg"
                             className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
                           />
@@ -535,6 +634,13 @@ export function PageEditor({ initialContent }: Props) {
                           >
                             清空
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => item.imageUrl ? replaceGalleryImage(index, itemIndex, item.imageUrl, { source: createUserSource("gallery", item.imageUrl) }) : showToast("请先输入图片 URL")}
+                            className="shrink-0 rounded-lg bg-slate-950 px-2 text-xs text-white transition hover:bg-slate-800"
+                          >
+                            替换
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -544,6 +650,55 @@ export function PageEditor({ initialContent }: Props) {
             ) : (
               <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">当前页面没有 Gallery 模块。</p>
             )}
+
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-slate-700">图片来源</p>
+                <span className="text-[11px] text-slate-400">{content.assets?.sources?.length ?? 0} 条</span>
+              </div>
+              {content.assets?.sources?.length ? (
+                <div className="space-y-2">
+                  {content.assets.sources.map((source, index) => {
+                    const imageUrl = source.imageUrl ?? source.url;
+                    const typeLabel = source.type === "hero" ? "Hero" : source.type === "gallery" ? "Gallery" : source.type === "cover" ? "Cover" : source.type === "icon" ? "Icon" : "图片";
+                    return (
+                      <div key={source.id ?? `${source.url}-${index}`} className={`space-y-2 rounded-lg border p-2 ${source.disabled ? "border-slate-200 bg-slate-50 opacity-60" : "border-slate-200 bg-slate-50"}`}>
+                        <div className="flex gap-2">
+                          {imageUrl ? <img src={imageUrl} alt={source.title ?? "图片来源"} className="h-14 w-16 shrink-0 rounded-md object-cover" /> : null}
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-medium text-white">{typeLabel}</span>
+                              {source.provider ? <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">{source.provider}</span> : null}
+                              {source.disabled ? <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-600">已禁用</span> : null}
+                            </div>
+                            <p className="truncate text-xs font-medium text-slate-800">{source.title ?? "未命名图片"}</p>
+                            <p className="truncate text-[11px] text-slate-500">{source.licenseHint ?? "未提供 licenseHint"}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {source.url ? (
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => showToast("已打开来源链接")}
+                              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 transition hover:text-slate-950"
+                            >
+                              打开来源
+                            </a>
+                          ) : null}
+                          <button type="button" onClick={() => copyImageUrl(source)} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 transition hover:text-slate-950">复制图片 URL</button>
+                          <button type="button" onClick={() => applySourceAsHero(source)} className="rounded-full bg-slate-950 px-2.5 py-1 text-[11px] text-white transition hover:bg-slate-800">用作 Hero</button>
+                          <button type="button" onClick={() => disableSourceImage(source)} className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] text-red-600 transition hover:border-red-300">禁用这张图</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">暂无自动图片来源。用户替换图片后也会记录在这里。</p>
+              )}
+            </div>
           </div>
         </Collapsible>
 

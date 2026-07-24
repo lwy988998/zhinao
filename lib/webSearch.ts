@@ -5,6 +5,7 @@ export type SearchAsset = {
   source?: string;
   snippet?: string;
   licenseHint?: string;
+  provider?: string;
 };
 
 type SearchParams = {
@@ -84,6 +85,7 @@ function normalizeAsset(item: unknown, provider: string): SearchAsset | null {
     source: asString(item.source) ?? asString(item.provider) ?? provider,
     snippet: asString(item.snippet) ?? asString(item.summary) ?? asString(item.description),
     licenseHint: asString(item.license) ?? asString(item.licenseHint),
+    provider,
   };
 }
 
